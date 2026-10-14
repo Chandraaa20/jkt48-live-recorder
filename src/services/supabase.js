@@ -13,14 +13,14 @@ const STORAGE_KEY_TELEGRAM_TOKEN = 'jkt48_telegram_token';
 const STORAGE_KEY_TELEGRAM_CHAT_ID = 'jkt48_telegram_chat_id';
 const STORAGE_KEY_BROWSER_NOTIF = 'jkt48_browser_notif';
 
-// Default values
+// Default values (Baked-in so Android APK is 100% pre-configured on first install)
 const DEFAULT_SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL || 'https://rugjqcvwlfkonziykita.supabase.co';
 const DEFAULT_GITHUB_REPO = import.meta.env.VITE_GITHUB_REPO || 'Chandraaa20/jkt48-live-recorder';
-const DEFAULT_SUPABASE_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY || '';
+const DEFAULT_SUPABASE_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJ1Z2pxY3Z3bGZrb256aXlraXRhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTE5ODQyNzUsImV4cCI6MjEwNzU2MDI3NX0.g6RFp4Ykir52EvdCpbZfZfyeoKGb5ohwLTD2YjkYNE8';
 const DEFAULT_WORKER_URL = import.meta.env.VITE_WORKER_URL || '';
 const DEFAULT_GITHUB_TOKEN = import.meta.env.VITE_GITHUB_TOKEN || '';
-const DEFAULT_TELEGRAM_TOKEN = import.meta.env.VITE_TELEGRAM_BOT_TOKEN || '';
-const DEFAULT_TELEGRAM_CHAT_ID = import.meta.env.VITE_TELEGRAM_CHAT_ID || '';
+const DEFAULT_TELEGRAM_TOKEN = import.meta.env.VITE_TELEGRAM_BOT_TOKEN || '8984988206:AAEpkoy-TRN6HGg0Uk_MI67Pon7gJiucEuU';
+const DEFAULT_TELEGRAM_CHAT_ID = import.meta.env.VITE_TELEGRAM_CHAT_ID || '-1004418157265';
 
 /**
  * Single source of truth for all application configuration
