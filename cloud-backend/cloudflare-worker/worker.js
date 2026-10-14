@@ -373,6 +373,47 @@ export async function processLiveStreams(env) {
       const [inserted] = await supabase.insertActiveLive(newLivePayload);
       activeLiveRecord = inserted || newLivePayload;
       currentLiveIdsInDb.add(activeLiveRecord.id);
+
+      // Trigger Telegram notification if member has is_notify === true
+      if (member.is_notify && env.TELEGRAM_BOT_TOKEN && env.TELEGRAM_CHAT_ID) {
+        try {
+          const autoRecTxt = member.is_auto_record ? '✅ AKTIF (Otomatis Merekam)' : '⏸️ Tidak Aktif';
+          const msg =
+            `🔔 <b>JKT48 LIVE ALERT!</b>\n\n` +
+            `👤 <b>Member:</b> ${member.name} ${member.generation ? `(Gen ${member.generation})` : ''}\n` +
+            `📺 <b>Platform:</b> ${stream.platform.toUpperCase()}\n` +
+            `📝 <b>Judul:</b> ${stream.title}\n` +
+            `⏺️ <b>Cloud Recording:</b> ${autoRecTxt}\n` +
+            `⏰ <b>Mulai:</b> ${new Date(newLivePayload.started_at).toISOString()}\n\n` +
+            `<i>Notifikasi otomatis dari Cloudflare Worker JKT48 Watcher.</i>`;
+
+          const photoUrl = newLivePayload.thumbnail_url || member.avatar_url;
+          if (photoUrl && photoUrl.startsWith('http')) {
+            await fetch(`https://api.telegram.org/bot${env.TELEGRAM_BOT_TOKEN}/sendPhoto`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                chat_id: env.TELEGRAM_CHAT_ID,
+                photo: photoUrl,
+                caption: msg,
+                parse_mode: 'HTML',
+              }),
+            });
+          } else {
+            await fetch(`https://api.telegram.org/bot${env.TELEGRAM_BOT_TOKEN}/sendMessage`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                chat_id: env.TELEGRAM_CHAT_ID,
+                text: msg,
+                parse_mode: 'HTML',
+              }),
+            });
+          }
+        } catch (tgErr) {
+          console.error('[Worker] Telegram notification dispatch error:', tgErr);
+        }
+      }
     } else {
       currentLiveIdsInDb.add(existing.id);
       // Update stream_url or title if changed

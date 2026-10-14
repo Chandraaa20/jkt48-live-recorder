@@ -9,6 +9,9 @@ const STORAGE_KEY_KEY = 'jkt48_supabase_anon_key';
 const STORAGE_KEY_WORKER_URL = 'jkt48_worker_url';
 const STORAGE_KEY_GITHUB_TOKEN = 'jkt48_github_token';
 const STORAGE_KEY_GITHUB_REPO = 'jkt48_github_repo';
+const STORAGE_KEY_TELEGRAM_TOKEN = 'jkt48_telegram_token';
+const STORAGE_KEY_TELEGRAM_CHAT_ID = 'jkt48_telegram_chat_id';
+const STORAGE_KEY_BROWSER_NOTIF = 'jkt48_browser_notif';
 
 // Default values
 const DEFAULT_SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL || 'https://rugjqcvwlfkonziykita.supabase.co';
@@ -16,6 +19,8 @@ const DEFAULT_GITHUB_REPO = import.meta.env.VITE_GITHUB_REPO || 'Chandraaa20/jkt
 const DEFAULT_SUPABASE_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY || '';
 const DEFAULT_WORKER_URL = import.meta.env.VITE_WORKER_URL || '';
 const DEFAULT_GITHUB_TOKEN = import.meta.env.VITE_GITHUB_TOKEN || '';
+const DEFAULT_TELEGRAM_TOKEN = import.meta.env.VITE_TELEGRAM_BOT_TOKEN || '';
+const DEFAULT_TELEGRAM_CHAT_ID = import.meta.env.VITE_TELEGRAM_CHAT_ID || '';
 
 /**
  * Single source of truth for all application configuration
@@ -59,12 +64,33 @@ export function getAppConfig() {
     DEFAULT_GITHUB_REPO
   ).trim();
 
+  const telegramBotToken = (
+    parsed.telegramBotToken ??
+    localStorage.getItem(STORAGE_KEY_TELEGRAM_TOKEN) ??
+    DEFAULT_TELEGRAM_TOKEN
+  ).trim();
+
+  const telegramChatId = (
+    parsed.telegramChatId ??
+    localStorage.getItem(STORAGE_KEY_TELEGRAM_CHAT_ID) ??
+    DEFAULT_TELEGRAM_CHAT_ID
+  ).trim();
+
+  const enableBrowserNotification = (
+    parsed.enableBrowserNotification !== undefined
+      ? Boolean(parsed.enableBrowserNotification)
+      : localStorage.getItem(STORAGE_KEY_BROWSER_NOTIF) !== 'false'
+  );
+
   return {
     supabaseUrl,
     supabaseKey,
     workerUrl,
     githubToken,
     githubRepo,
+    telegramBotToken,
+    telegramChatId,
+    enableBrowserNotification,
   };
 }
 
@@ -77,7 +103,11 @@ export function saveAppConfig(updates = {}) {
 
   for (const [k, v] of Object.entries(updates)) {
     if (v !== undefined && v !== null) {
-      merged[k] = String(v).trim();
+      if (typeof v === 'boolean') {
+        merged[k] = v;
+      } else {
+        merged[k] = String(v).trim();
+      }
     }
   }
 
@@ -89,6 +119,9 @@ export function saveAppConfig(updates = {}) {
     localStorage.setItem(STORAGE_KEY_WORKER_URL, merged.workerUrl);
     localStorage.setItem(STORAGE_KEY_GITHUB_TOKEN, merged.githubToken);
     localStorage.setItem(STORAGE_KEY_GITHUB_REPO, merged.githubRepo);
+    localStorage.setItem(STORAGE_KEY_TELEGRAM_TOKEN, merged.telegramBotToken);
+    localStorage.setItem(STORAGE_KEY_TELEGRAM_CHAT_ID, merged.telegramChatId);
+    localStorage.setItem(STORAGE_KEY_BROWSER_NOTIF, String(merged.enableBrowserNotification));
   } catch (err) {
     console.error('Error saving app config:', err);
   }
@@ -274,4 +307,106 @@ export async function triggerGitHubRecorder({ recording_id, member_name, platfor
       message: `Koneksi ke GitHub API gagal: ${err.message}`,
     };
   }
+}
+
+/**
+ * Send notification to Telegram Bot API
+ */
+export async function sendTelegramNotification({ token, chatId, text, photoUrl }) {
+  const cfg = getAppConfig();
+  const botToken = (token || cfg.telegramBotToken || '').trim();
+  const targetChatId = (chatId || cfg.telegramChatId || '').trim();
+
+  if (!botToken || !targetChatId) {
+    return {
+      success: false,
+      message: 'Telegram Bot Token atau Chat ID belum diisi di Pengaturan.',
+    };
+  }
+
+  // 1. If photo is provided, try sendPhoto first
+  if (photoUrl && photoUrl.startsWith('http')) {
+    try {
+      const res = await fetch(`https://api.telegram.org/bot${botToken}/sendPhoto`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          chat_id: targetChatId,
+          photo: photoUrl,
+          caption: text,
+          parse_mode: 'HTML',
+        }),
+      });
+
+      const data = await res.json();
+      if (res.ok && data.ok) {
+        return { success: true, message: 'Notifikasi foto berhasil terkirim ke Telegram!' };
+      }
+    } catch (e) {
+      console.warn('sendPhoto failed, falling back to sendMessage:', e.message);
+    }
+  }
+
+  // 2. Standard text message fallback
+  try {
+    const res = await fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        chat_id: targetChatId,
+        text,
+        parse_mode: 'HTML',
+        disable_web_page_preview: false,
+      }),
+    });
+
+    const data = await res.json();
+    if (res.ok && data.ok) {
+      return { success: true, message: 'Pesan berhasil terkirim ke Telegram!' };
+    } else {
+      return {
+        success: false,
+        message: `Telegram Error: ${data.description || 'Gagal mengirim pesan'}`,
+      };
+    }
+  } catch (err) {
+    return { success: false, message: `Gagal menghubungi Telegram Bot API: ${err.message}` };
+  }
+}
+
+/**
+ * Display browser / system Web Notification
+ */
+export async function sendDeviceNotification(title, options = {}) {
+  const cfg = getAppConfig();
+  if (cfg.enableBrowserNotification === false) return false;
+
+  if (typeof window === 'undefined' || !('Notification' in window)) {
+    console.warn('Browser/device does not support Web Notifications.');
+    return false;
+  }
+
+  try {
+    if (Notification.permission === 'granted') {
+      new Notification(title, {
+        icon: '/favicon.svg',
+        badge: '/favicon.svg',
+        ...options,
+      });
+      return true;
+    } else if (Notification.permission !== 'denied') {
+      const permission = await Notification.requestPermission();
+      if (permission === 'granted') {
+        new Notification(title, {
+          icon: '/favicon.svg',
+          badge: '/favicon.svg',
+          ...options,
+        });
+        return true;
+      }
+    }
+  } catch (err) {
+    console.warn('Error displaying system notification:', err);
+  }
+  return false;
 }

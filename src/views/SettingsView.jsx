@@ -13,6 +13,8 @@ import {
   Code2,
   HelpCircle,
   RotateCcw,
+  Bell,
+  Send,
 } from '../components/Icons';
 import {
   getAppConfig,
@@ -20,6 +22,8 @@ import {
   testSupabaseConnection,
   triggerCloudflareWorker,
   triggerGitHubRecorder,
+  sendTelegramNotification,
+  sendDeviceNotification,
 } from '../services/supabase';
 
 // SQL Migration script representation for viewing & 1-click copying
@@ -92,6 +96,9 @@ export default function SettingsView({
   const [workerUrl, setWorkerUrl] = useState(() => getAppConfig().workerUrl);
   const [githubToken, setGithubToken] = useState(() => getAppConfig().githubToken);
   const [githubRepo, setGithubRepo] = useState(() => getAppConfig().githubRepo);
+  const [telegramBotToken, setTelegramBotToken] = useState(() => getAppConfig().telegramBotToken || '');
+  const [telegramChatId, setTelegramChatId] = useState(() => getAppConfig().telegramChatId || '');
+  const [enableBrowserNotification, setEnableBrowserNotification] = useState(() => getAppConfig().enableBrowserNotification ?? true);
 
   const [isTesting, setIsTesting] = useState(false);
   const [testResult, setTestResult] = useState(null);
@@ -103,6 +110,8 @@ export default function SettingsView({
   const [workerFeedback, setWorkerFeedback] = useState(null);
   const [isTestingGithub, setIsTestingGithub] = useState(false);
   const [githubFeedback, setGithubFeedback] = useState(null);
+  const [isTestingTelegram, setIsTestingTelegram] = useState(false);
+  const [telegramFeedback, setTelegramFeedback] = useState(null);
 
   useEffect(() => {
     const config = getAppConfig();
@@ -111,6 +120,9 @@ export default function SettingsView({
     setWorkerUrl(config.workerUrl);
     setGithubToken(config.githubToken);
     setGithubRepo(config.githubRepo);
+    setTelegramBotToken(config.telegramBotToken || '');
+    setTelegramChatId(config.telegramChatId || '');
+    setEnableBrowserNotification(config.enableBrowserNotification ?? true);
   }, []);
 
   const handleSaveConfig = () => {
@@ -120,10 +132,39 @@ export default function SettingsView({
       workerUrl,
       githubToken,
       githubRepo,
+      telegramBotToken,
+      telegramChatId,
+      enableBrowserNotification,
     });
     setSaveSuccess(true);
     setTimeout(() => setSaveSuccess(false), 3000);
     onRefreshAll();
+  };
+
+  const handleTestTelegram = async () => {
+    setIsTestingTelegram(true);
+    setTelegramFeedback(null);
+    try {
+      if (enableBrowserNotification) {
+        await sendDeviceNotification('JKT48 Live & Cloud Recorder', {
+          body: '🔔 Tes Notifikasi Berhasil Terhubung!',
+        });
+      }
+
+      const res = await sendTelegramNotification({
+        token: telegramBotToken,
+        chatId: telegramChatId,
+        text: `🔔 <b>Tes Notifikasi JKT48 Live & Cloud Recorder Berhasil!</b>\n\n` +
+          `Bot Telegram Anda telah terhubung dengan sempurna ke sistem pemantau JKT48.\n` +
+          `Sistem akan otomatis mengirim notifikasi instan saat member favorit mulai live di IDN Live atau Showroom. ✨`,
+      });
+
+      setTelegramFeedback(res);
+    } catch (err) {
+      setTelegramFeedback({ success: false, message: `Error: ${err.message}` });
+    } finally {
+      setIsTestingTelegram(false);
+    }
   };
 
   const handleTriggerWorker = async () => {
@@ -430,6 +471,127 @@ export default function SettingsView({
           <Save className="w-3.5 h-3.5 text-rose-400" />
           <span>Simpan Seluruh Pengaturan Cloud</span>
         </button>
+      </div>
+
+      {/* 3. Telegram & Push Notifications Configuration Card */}
+      <div className="p-4 rounded-2xl bg-dark-card border border-dark-border space-y-4 shadow-sm">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center space-x-2">
+            <div className="p-2 rounded-lg bg-sky-500/10 text-sky-400 border border-sky-500/20">
+              <Bell className="w-4 h-4" />
+            </div>
+            <div>
+              <h3 className="text-sm font-bold text-white">3. Notifikasi Live & Bot Telegram (Full Online)</h3>
+              <p className="text-[11px] text-dark-muted">
+                Peringatan instan ke Telegram & Android saat member mulai live
+              </p>
+            </div>
+          </div>
+        </div>
+
+        {/* Form Inputs */}
+        <div className="space-y-3 pt-1">
+          <div>
+            <div className="flex items-center justify-between mb-1">
+              <label className="text-xs font-semibold text-slate-300">
+                Telegram Bot Token
+              </label>
+              <a
+                href="https://t.me/BotFather"
+                target="_blank"
+                rel="noreferrer"
+                className="text-[11px] text-rose-400 hover:text-rose-300 flex items-center space-x-0.5 font-medium"
+              >
+                <span>Dapatkan dari @BotFather</span>
+                <ExternalLink className="w-3 h-3 ml-0.5" />
+              </a>
+            </div>
+            <input
+              type="password"
+              value={telegramBotToken}
+              onChange={(e) => setTelegramBotToken(e.target.value)}
+              placeholder="contoh: 123456789:ABCdefGhIJKlmNoPQRsTUVwxyZ"
+              className="w-full px-3 py-2 rounded-xl bg-dark-bg border border-dark-border text-xs text-white placeholder-slate-500 focus:outline-none focus:border-rose-500"
+            />
+          </div>
+
+          <div>
+            <div className="flex items-center justify-between mb-1">
+              <label className="text-xs font-semibold text-slate-300">
+                Telegram Chat / Channel ID
+              </label>
+              <span className="text-[10px] text-dark-muted">
+                Chat ID pribadi atau channel (-100xxxx)
+              </span>
+            </div>
+            <input
+              type="text"
+              value={telegramChatId}
+              onChange={(e) => setTelegramChatId(e.target.value)}
+              placeholder="contoh: 123456789 atau -100123456789"
+              className="w-full px-3 py-2 rounded-xl bg-dark-bg border border-dark-border text-xs text-white placeholder-slate-500 focus:outline-none focus:border-rose-500"
+            />
+          </div>
+
+          {/* Toggle Browser / Android System Notification */}
+          <div className="flex items-center justify-between p-3 rounded-xl bg-dark-bg border border-dark-border">
+            <div>
+              <p className="text-xs font-semibold text-white">
+                Aktifkan Notifikasi Push Browser / Android
+              </p>
+              <p className="text-[11px] text-dark-muted">
+                Munculkan popup banner notifikasi saat member sedang siaran
+              </p>
+            </div>
+            <label className="relative inline-flex items-center cursor-pointer">
+              <input
+                type="checkbox"
+                checked={enableBrowserNotification}
+                onChange={(e) => setEnableBrowserNotification(e.target.checked)}
+                className="sr-only peer"
+              />
+              <div className="w-9 h-5 bg-slate-800 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-rose-600"></div>
+            </label>
+          </div>
+        </div>
+
+        {/* Action Buttons for Telegram */}
+        <div className="flex items-center gap-2 pt-1">
+          <button
+            onClick={handleSaveConfig}
+            className="flex-1 flex items-center justify-center space-x-1.5 py-2 rounded-xl bg-rose-600 hover:bg-rose-500 active:scale-95 text-xs font-bold text-white transition-all shadow-md shadow-rose-950/40"
+          >
+            <Save className="w-3.5 h-3.5" />
+            <span>Simpan Notifikasi</span>
+          </button>
+
+          <button
+            onClick={handleTestTelegram}
+            disabled={isTestingTelegram || !telegramBotToken || !telegramChatId}
+            className="flex-1 flex items-center justify-center space-x-1.5 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 active:scale-95 text-xs font-semibold text-sky-400 transition-all border border-slate-700 disabled:opacity-40"
+          >
+            <Send className={`w-3.5 h-3.5 ${isTestingTelegram ? 'animate-bounce text-sky-400' : ''}`} />
+            <span>{isTestingTelegram ? 'Mengirim...' : 'Tes Kirim Notifikasi'}</span>
+          </button>
+        </div>
+
+        {/* Telegram Feedback Message */}
+        {telegramFeedback && (
+          <div
+            className={`p-2.5 rounded-xl text-xs flex items-center space-x-2 border ${
+              telegramFeedback.success
+                ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-400'
+                : 'bg-rose-500/10 border-rose-500/30 text-rose-400'
+            }`}
+          >
+            {telegramFeedback.success ? (
+              <Check className="w-4 h-4 shrink-0 text-emerald-400" />
+            ) : (
+              <AlertCircle className="w-4 h-4 shrink-0 text-rose-400" />
+            )}
+            <span>{telegramFeedback.message}</span>
+          </div>
+        )}
       </div>
 
       {/* SQL Migration Script Viewer */}

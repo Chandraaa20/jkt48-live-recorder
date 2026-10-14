@@ -23,7 +23,11 @@ import {
   finishRecording,
   setupRealtimeSubscription,
 } from './services/dataService';
-import { getSupabaseClient } from './services/supabase';
+import {
+  getSupabaseClient,
+  sendTelegramNotification,
+  sendDeviceNotification,
+} from './services/supabase';
 
 export default function App() {
   const [currentTab, setCurrentTab] = useState(TABS.LIVE);
@@ -208,6 +212,24 @@ export default function App() {
         newSimulatedLive.title,
         newSimulatedLive.platform
       );
+    }
+
+    // If member has is_notify = true, send live notification!
+    if (targetMember.is_notify !== false) {
+      sendDeviceNotification(`🔴 ${targetMember.name} Sedang Live! (Simulasi)`, {
+        body: 'IDN LIVE: Malam mingguan bareng Freya! ✨ [Live Test]',
+        icon: targetMember.avatar_url,
+      });
+
+      sendTelegramNotification({
+        text: `🔔 <b>JKT48 LIVE ALERT! [SIMULASI TEST]</b>\n\n` +
+          `👤 <b>Member:</b> ${targetMember.name}\n` +
+          `📺 <b>Platform:</b> IDN LIVE\n` +
+          `📝 <b>Judul:</b> Malam mingguan bareng Freya! ✨ [Live Test]\n` +
+          `⏺️ <b>Cloud Recording:</b> ${targetMember.is_auto_record ? '✅ AKTIF (Otomatis Merekam)' : '⏸️ Tidak Aktif'}\n\n` +
+          `<i>Sesi simulasi uji coba player dan notifikasi.</i>`,
+        photoUrl: newSimulatedLive.thumbnail_url,
+      }).catch(() => {});
     }
   };
 

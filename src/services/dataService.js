@@ -1,4 +1,9 @@
-import { getSupabaseClient, triggerGitHubRecorder } from './supabase';
+import {
+  getSupabaseClient,
+  triggerGitHubRecorder,
+  sendTelegramNotification,
+  sendDeviceNotification,
+} from './supabase';
 import {
   INITIAL_JKT48_MEMBERS,
   INITIAL_ACTIVE_LIVES,
@@ -8,6 +13,29 @@ import {
 const LOCAL_STORAGE_MEMBERS = 'jkt48_local_members';
 const LOCAL_STORAGE_LIVES = 'jkt48_local_lives';
 const LOCAL_STORAGE_RECORDINGS = 'jkt48_local_recordings';
+const LOCAL_STORAGE_NOTIFIED_LIVES = 'jkt48_notified_lives';
+
+export function getNotifiedLives() {
+  try {
+    const raw = localStorage.getItem(LOCAL_STORAGE_NOTIFIED_LIVES);
+    return raw ? JSON.parse(raw) : [];
+  } catch {
+    return [];
+  }
+}
+
+export function markLiveNotified(liveId) {
+  try {
+    const list = getNotifiedLives();
+    if (!list.includes(liveId)) {
+      list.push(liveId);
+      if (list.length > 200) list.splice(0, list.length - 200);
+      localStorage.setItem(LOCAL_STORAGE_NOTIFIED_LIVES, JSON.stringify(list));
+    }
+  } catch (e) {
+    console.error('Failed to update notified lives:', e);
+  }
+}
 
 // Helper for local mock storage
 function getLocalData(key, fallback) {
@@ -440,6 +468,40 @@ export async function syncRealActiveLives() {
       }
     }
 
+    // Send notifications for newly detected live sessions where member has is_notify === true
+    const notifiedIds = getNotifiedLives();
+    for (const realLive of activeMatched) {
+      if (realLive.member?.is_notify !== false && !notifiedIds.includes(realLive.id)) {
+        markLiveNotified(realLive.id);
+
+        const platformName = realLive.platform?.toUpperCase() || 'LIVE';
+        const autoRecordStatus = realLive.member?.is_auto_record ? '✅ AKTIF (Otomatis Merekam Cloud)' : '⏸️ Tidak Aktif';
+        const formattedTime = new Date(realLive.started_at).toLocaleTimeString('id-ID', {
+          hour: '2-digit',
+          minute: '2-digit',
+        });
+
+        const messageText =
+          `🔔 <b>JKT48 SEDANG LIVE!</b>\n\n` +
+          `👤 <b>Member:</b> ${realLive.member.name} ${realLive.member.generation ? `(Gen ${realLive.member.generation})` : ''}\n` +
+          `📺 <b>Platform:</b> ${platformName}\n` +
+          `📝 <b>Judul:</b> ${realLive.title}\n` +
+          `⏺️ <b>Cloud Recording:</b> ${autoRecordStatus}\n` +
+          `⏰ <b>Mulai:</b> ${formattedTime} WIB\n\n` +
+          `<i>Buka aplikasi JKT48 Live & Cloud Recorder untuk menonton stream langsung!</i>`;
+
+        sendTelegramNotification({
+          text: messageText,
+          photoUrl: realLive.thumbnail_url || realLive.member?.avatar_url,
+        }).catch((e) => console.warn('Telegram notify note:', e));
+
+        sendDeviceNotification(`🔴 ${realLive.member.name} Sedang Live!`, {
+          body: `${platformName}: ${realLive.title}`,
+          icon: realLive.member?.avatar_url || realLive.thumbnail_url,
+        });
+      }
+    }
+
     // Preserve only user-triggered simulated lives (excluding any legacy dummy IDs)
     const localLives = getLocalData(LOCAL_STORAGE_LIVES, []);
     const userSimulated = localLives.filter(
@@ -487,6 +549,12 @@ export async function clearSimulatedLives() {
     (l) => !l.is_simulated && !l.id?.startsWith('live-sim-') && l.id !== 'live-freya-01' && l.id !== 'live-marsha-02'
   );
   setLocalData(LOCAL_STORAGE_LIVES, realOnly);
+
+  // Clear simulated from notified tracker
+  try {
+    const list = getNotifiedLives().filter((id) => !id.startsWith('live-sim-'));
+    localStorage.setItem(LOCAL_STORAGE_NOTIFIED_LIVES, JSON.stringify(list));
+  } catch (_) {}
 
   if (supabase) {
     try {
