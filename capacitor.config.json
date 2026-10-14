@@ -1,0 +1,9 @@
+{
+  "appId": "com.jkt48.liverecorder",
+  "appName": "JKT48 Live & Cloud Recorder",
+  "webDir": "dist",
+  "bundledWebRuntime": false,
+  "server": {
+    "androidScheme": "https"
+  }
+}
