@@ -120,8 +120,8 @@ jobs:
       - name: Update Status to Uploading (Supabase)
         if: success()
         env:
-          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
-          SUPABASE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY || secrets.SUPABASE_ANON_KEY }}
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL || 'https://rugjqcvwlfkonziykita.supabase.co' }}
+          SUPABASE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY || secrets.SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJ1Z2pxY3Z3bGZrb256aXlraXRhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTE5ODQyNzUsImV4cCI6MjEwNzU2MDI3NX0.g6RFp4Ykir52EvdCpbZfZfyeoKGb5ohwLTD2YjkYNE8' }}
         run: |
           if [ -n "$SUPABASE_URL" ] && [ -n "$SUPABASE_KEY" ]; then
             curl -s -X PATCH "${SUPABASE_URL}/rest/v1/recordings?id=eq.${RECORDING_ID}" \
@@ -135,8 +135,8 @@ jobs:
         id: upload_telegram
         if: success()
         env:
-          BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
-          CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+          BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN || '8984988206:AAEpkoy-TRN6HGg0Uk_MI67Pon7gJiucEuU' }}
+          CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID || '-1004418157265' }}
         run: |
           if [ -z "$BOT_TOKEN" ] || [ -z "$CHAT_ID" ]; then
             echo "TELEGRAM_BOT_TOKEN or TELEGRAM_CHAT_ID not configured in GitHub Secrets."
@@ -229,8 +229,8 @@ jobs:
       - name: Mark Recording Completed in Supabase
         if: success()
         env:
-          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
-          SUPABASE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY || secrets.SUPABASE_ANON_KEY }}
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL || 'https://rugjqcvwlfkonziykita.supabase.co' }}
+          SUPABASE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY || secrets.SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJ1Z2pxY3Z3bGZrb256aXlraXRhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTE5ODQyNzUsImV4cCI6MjEwNzU2MDI3NX0.g6RFp4Ykir52EvdCpbZfZfyeoKGb5ohwLTD2YjkYNE8' }}
         run: |
           if [ -n "$SUPABASE_URL" ] && [ -n "$SUPABASE_KEY" ]; then
             VIDEO_URL_PAYLOAD="${TELEGRAM_LINK:-https://t.me}"
@@ -244,8 +244,8 @@ jobs:
       - name: Handle Failure
         if: failure()
         env:
-          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
-          SUPABASE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY || secrets.SUPABASE_ANON_KEY }}
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL || 'https://rugjqcvwlfkonziykita.supabase.co' }}
+          SUPABASE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY || secrets.SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJ1Z2pxY3Z3bGZrb256aXlraXRhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTE5ODQyNzUsImV4cCI6MjEwNzU2MDI3NX0.g6RFp4Ykir52EvdCpbZfZfyeoKGb5ohwLTD2YjkYNE8' }}
         run: |
           if [ -n "$SUPABASE_URL" ] && [ -n "$SUPABASE_KEY" ]; then
             echo "Recording failed. Updating status to 'failed' in Supabase..."
