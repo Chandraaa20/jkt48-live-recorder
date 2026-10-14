@@ -27,3 +27,5 @@ dist-ssr
 *.sw?
 dist-apk
 android/
+.wrangler/
+cloud-backend/cloudflare-worker/.wrangler/
