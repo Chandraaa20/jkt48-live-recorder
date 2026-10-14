@@ -7,7 +7,9 @@
     "dev": "vite",
     "build": "vite build",
     "lint": "oxlint",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "deploy:worker": "cd cloud-backend/cloudflare-worker && npx wrangler deploy",
+    "dev:worker": "cd cloud-backend/cloudflare-worker && npx wrangler dev"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.49.1",

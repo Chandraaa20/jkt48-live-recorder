@@ -13,4 +13,5 @@ crons = ["* * * * *"]
 # wrangler secret put GITHUB_TOKEN
 # wrangler secret put GITHUB_REPO
 [vars]
-# GITHUB_REPO = "username/jkt48-live-recorder"
+SUPABASE_URL = "https://rugjqcvwlfkonziykita.supabase.co"
+GITHUB_REPO = "Chandraaa20/jkt48-live-recorder"
