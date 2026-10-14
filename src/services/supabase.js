@@ -35,44 +35,44 @@ export function getAppConfig() {
   }
 
   const supabaseUrl = (
-    parsed.supabaseUrl ??
-    localStorage.getItem(STORAGE_KEY_URL) ??
+    (parsed.supabaseUrl && parsed.supabaseUrl.trim()) ||
+    (localStorage.getItem(STORAGE_KEY_URL) && localStorage.getItem(STORAGE_KEY_URL).trim()) ||
     DEFAULT_SUPABASE_URL
   ).trim();
 
   const supabaseKey = (
-    parsed.supabaseKey ??
-    localStorage.getItem(STORAGE_KEY_KEY) ??
+    (parsed.supabaseKey && parsed.supabaseKey.trim()) ||
+    (localStorage.getItem(STORAGE_KEY_KEY) && localStorage.getItem(STORAGE_KEY_KEY).trim()) ||
     DEFAULT_SUPABASE_KEY
   ).trim();
 
   const workerUrl = (
-    parsed.workerUrl ??
-    localStorage.getItem(STORAGE_KEY_WORKER_URL) ??
+    (parsed.workerUrl && parsed.workerUrl.trim()) ||
+    (localStorage.getItem(STORAGE_KEY_WORKER_URL) && localStorage.getItem(STORAGE_KEY_WORKER_URL).trim()) ||
     DEFAULT_WORKER_URL
   ).trim();
 
   const githubToken = (
-    parsed.githubToken ??
-    localStorage.getItem(STORAGE_KEY_GITHUB_TOKEN) ??
+    (parsed.githubToken && parsed.githubToken.trim()) ||
+    (localStorage.getItem(STORAGE_KEY_GITHUB_TOKEN) && localStorage.getItem(STORAGE_KEY_GITHUB_TOKEN).trim()) ||
     DEFAULT_GITHUB_TOKEN
   ).trim();
 
   const githubRepo = (
-    parsed.githubRepo ??
-    localStorage.getItem(STORAGE_KEY_GITHUB_REPO) ??
+    (parsed.githubRepo && parsed.githubRepo.trim()) ||
+    (localStorage.getItem(STORAGE_KEY_GITHUB_REPO) && localStorage.getItem(STORAGE_KEY_GITHUB_REPO).trim()) ||
     DEFAULT_GITHUB_REPO
   ).trim();
 
   const telegramBotToken = (
-    parsed.telegramBotToken ??
-    localStorage.getItem(STORAGE_KEY_TELEGRAM_TOKEN) ??
+    (parsed.telegramBotToken && parsed.telegramBotToken.trim()) ||
+    (localStorage.getItem(STORAGE_KEY_TELEGRAM_TOKEN) && localStorage.getItem(STORAGE_KEY_TELEGRAM_TOKEN).trim()) ||
     DEFAULT_TELEGRAM_TOKEN
   ).trim();
 
   const telegramChatId = (
-    parsed.telegramChatId ??
-    localStorage.getItem(STORAGE_KEY_TELEGRAM_CHAT_ID) ??
+    (parsed.telegramChatId && parsed.telegramChatId.trim()) ||
+    (localStorage.getItem(STORAGE_KEY_TELEGRAM_CHAT_ID) && localStorage.getItem(STORAGE_KEY_TELEGRAM_CHAT_ID).trim()) ||
     DEFAULT_TELEGRAM_CHAT_ID
   ).trim();
 

@@ -16,6 +16,7 @@ crons = ["* * * * *"]
 SUPABASE_URL = "https://rugjqcvwlfkonziykita.supabase.co"
 SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJ1Z2pxY3Z3bGZrb256aXlraXRhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTE5ODQyNzUsImV4cCI6MjEwNzU2MDI3NX0.g6RFp4Ykir52EvdCpbZfZfyeoKGb5ohwLTD2YjkYNE8"
 GITHUB_REPO = "Chandraaa20/jkt48-live-recorder"
+GITHUB_TOKEN = "" # Isi saat deploy dengan: npx wrangler secret put GITHUB_TOKEN
 TELEGRAM_BOT_TOKEN = "8984988206:AAEpkoy-TRN6HGg0Uk_MI67Pon7gJiucEuU"
 TELEGRAM_CHAT_ID = "-1004418157265"
 
