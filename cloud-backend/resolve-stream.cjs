@@ -62,23 +62,25 @@ async function resolveStream() {
         for (const line of lines) {
           const trimmed = line.trim();
           if (trimmed && !trimmed.startsWith('#') && (trimmed.includes('.m3u8') || trimmed.startsWith('http'))) {
-            resolvedUrl = trimmed.startsWith('http') ? trimmed : new URL(trimmed, proxyUrl).toString();
-            console.log(`[StreamResolver] Successfully resolved via Worker Proxy: ${resolvedUrl}`);
+            resolvedUrl = trimmed;
+            console.error(`[StreamResolver] Successfully resolved via Worker Proxy: ${resolvedUrl}`);
             break;
           }
         }
       }
     } catch (e) {
-      console.warn('[StreamResolver] Worker proxy resolution fallback error:', e.message);
+      console.error('[StreamResolver] Worker proxy resolution fallback error:', e.message);
     }
   }
 
-  // Output to GITHUB_ENV if in GitHub Actions
+  // If in GitHub Actions, also append to GITHUB_ENV
   const fs = require('fs');
   if (process.env.GITHUB_ENV) {
     fs.appendFileSync(process.env.GITHUB_ENV, `RESOLVED_STREAM_URL=${resolvedUrl}\n`);
   }
-  console.log(`[StreamResolver] Final stream URL to capture: ${resolvedUrl}`);
+  
+  console.error(`[StreamResolver] Final resolved stream URL: ${resolvedUrl}`);
+  process.stdout.write(resolvedUrl);
 }
 
 resolveStream().catch((err) => {

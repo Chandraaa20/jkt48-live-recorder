@@ -100,8 +100,8 @@ jobs:
           fi
 
           echo "Resolving active stream playlist URL..."
-          node cloud-backend/resolve-stream.cjs "$STREAM_URL" "$PLATFORM"
-          TARGET_URL="${RESOLVED_STREAM_URL:-$STREAM_URL}"
+          RESOLVED=$(node cloud-backend/resolve-stream.cjs "$STREAM_URL" "$PLATFORM")
+          TARGET_URL="${RESOLVED:-$STREAM_URL}"
           echo "Target Stream URL to record: $TARGET_URL"
 
           # Anti-corruption segmenter: MPEG-TS format is packetized and 100% playable even if cut mid-stream
