@@ -44,20 +44,32 @@ class IdnAdapter extends BasePlatformAdapter {
         // The API returns an array of live objects for both IDN and Showroom
         for (const item of (Array.isArray(data) ? data : [])) {
           const type = (item.type || item.platform || '').toLowerCase();
-            const externalId = item.url_key || item.username || '';
-            const streamUrl = item.stream_url || item.streaming_url_list?.[0]?.url || '';
+          if (type.includes('showroom')) continue;
 
-            if (streamUrl && externalId) {
-              lives.push({
-                platform: 'idn',
-                external_id: String(externalId).toLowerCase().replace(/^@/, ''),
-                room_url_key: item.url_key || item.slug || item.username || '',
-                title: item.title || item.slug || 'IDN Live Streaming',
-                stream_url: streamUrl,
-                thumbnail_url: item.image || item.img_alt || item.avatar || '',
-                started_at: item.started_at || new Date().toISOString(),
-              });
+          const externalId = item.url_key || item.username || '';
+          let streamUrl = '';
+          if (item.streaming_url_list && Array.isArray(item.streaming_url_list) && item.streaming_url_list.length > 0) {
+            const m3u8s = item.streaming_url_list.filter((s) => s.url && s.url.includes('.m3u8'));
+            if (m3u8s.length > 0) {
+              const sorted = [...m3u8s].sort((a, b) => (b.quality || 0) - (a.quality || 0));
+              streamUrl = sorted[0].url;
+            } else {
+              streamUrl = item.streaming_url_list[0].url;
             }
+          }
+          if (!streamUrl) streamUrl = item.stream_url || item.playback_url || '';
+
+          if (streamUrl && externalId) {
+            lives.push({
+              platform: 'idn',
+              external_id: String(externalId).toLowerCase().replace(/^@/, ''),
+              room_url_key: item.url_key || item.slug || item.username || '',
+              title: item.title || item.slug || `Live streaming ${item.name || ''}`,
+              stream_url: streamUrl,
+              thumbnail_url: item.image || item.img_alt || item.img || item.avatar || '',
+              started_at: item.started_at ? new Date(item.started_at).toISOString() : new Date().toISOString(),
+            });
+          }
         }
       }
     } catch (err) {
@@ -143,17 +155,27 @@ class ShowroomAdapter extends BasePlatformAdapter {
           const type = (item.type || item.platform || '').toLowerCase();
           if (type.includes('showroom') || item.stream_url?.includes('showroom')) {
             const roomId = String(item.room_id || item.room_url_key || '');
-            const streamUrl = item.stream_url || item.streaming_url_list?.[0]?.url || '';
+            let streamUrl = '';
+            if (item.streaming_url_list && Array.isArray(item.streaming_url_list) && item.streaming_url_list.length > 0) {
+              const m3u8s = item.streaming_url_list.filter((s) => s.url && s.url.includes('.m3u8'));
+              if (m3u8s.length > 0) {
+                const sorted = [...m3u8s].sort((a, b) => (b.quality || 0) - (a.quality || 0));
+                streamUrl = sorted[0].url;
+              } else {
+                streamUrl = item.streaming_url_list[0].url;
+              }
+            }
+            if (!streamUrl) streamUrl = item.stream_url || '';
 
-            if (streamUrl) {
+            if (streamUrl && roomId) {
               lives.push({
                 platform: 'showroom',
                 external_id: roomId,
                 room_url_key: item.room_url_key || item.url_key || '',
-                title: item.title || 'Showroom Live Streaming',
+                title: item.title || `Showroom Live ${item.name || ''}`,
                 stream_url: streamUrl,
-                thumbnail_url: item.image || item.img_alt || '',
-                started_at: item.started_at || new Date().toISOString(),
+                thumbnail_url: item.image || item.img_alt || item.img || '',
+                started_at: item.started_at ? new Date(item.started_at).toISOString() : new Date().toISOString(),
               });
             }
           }
@@ -163,7 +185,7 @@ class ShowroomAdapter extends BasePlatformAdapter {
       console.warn('[ShowroomAdapter] Aggregator fetch failed, trying direct showroom API:', err.message);
     }
 
-    // 2. Fallback: Direct Showroom Onlives API
+    // 2. Fallback: Direct Showroom Onlives API (strictly filter for JKT48 to avoid subrequest limits)
     if (lives.length === 0) {
       try {
         const srRes = await fetch('https://www.showroom-live.com/api/live/onlives', {
@@ -176,8 +198,13 @@ class ShowroomAdapter extends BasePlatformAdapter {
           
           for (const cat of onliveCategories) {
             for (const room of (cat.lives || [])) {
+              const mainName = (room.main_name || '').toLowerCase();
+              // Only query streaming URL for rooms explicitly belonging to JKT48
+              if (!mainName.includes('jkt48') && !mainName.includes('jkt 48')) {
+                continue;
+              }
+
               const roomId = String(room.room_id);
-              // Filter candidate idol/JKT rooms or let the matching engine match against DB
               const streamRes = await fetch(`https://www.showroom-live.com/api/live/streaming_url?room_id=${roomId}`, {
                 headers: { 'User-Agent': 'Mozilla/5.0' },
               });
@@ -342,7 +369,20 @@ export async function processLiveStreams(env) {
     const matchKeyId = `${stream.platform}:${stream.external_id.toLowerCase()}`;
     const matchKeySlug = stream.room_url_key ? `${stream.platform}:${stream.room_url_key.toLowerCase()}` : '';
 
-    const matched = platformLookup.get(matchKeyId) || (matchKeySlug ? platformLookup.get(matchKeySlug) : null);
+    let matched = platformLookup.get(matchKeyId) || (matchKeySlug ? platformLookup.get(matchKeySlug) : null);
+
+    // Fallback: Exact name or nickname match (avoid partial substring collisions)
+    if (!matched && stream.title) {
+      const cleanName = (stream.title || '').replace(/jkt48/gi, '').trim().toLowerCase();
+      const foundMember = (members || []).find((m) => {
+        const nick = (m.nickname || '').toLowerCase();
+        const fullName = m.name.toLowerCase();
+        return nick === cleanName || fullName === cleanName || fullName.split(' ').includes(cleanName);
+      });
+      if (foundMember) {
+        matched = { member: foundMember };
+      }
+    }
 
     if (matched) {
       activeJktMembers.push({
@@ -364,8 +404,8 @@ export async function processLiveStreams(env) {
     let activeLiveRecord = existing;
 
     if (!existing) {
-      // Member just started live -> Insert to active_lives
-      const liveId = crypto.randomUUID();
+      // Member just started live -> Insert to active_lives (1:1 with member UUID)
+      const liveId = member.id;
       const newLivePayload = {
         id: liveId,
         member_id: member.id,
