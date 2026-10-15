@@ -123,34 +123,38 @@ jobs:
           fi
 
           if [ "$PLATFORM" = "idn" ]; then
-            echo "IDN Live recording with Python Universal Capture Engine + WARP Egress..."
-            # Strategy 1: Python Engine with SOCKS5 WARP
-            python scripts/capture_hls.py "$STREAM_URL" "raw_segments/rec_part_000.ts" "$REC_DUR" "$RECORDING_ID" "$SUPABASE_URL" "$SUPABASE_KEY" "127.0.0.1" "40000" || true
+            echo "IDN Live recording via Cloudflare Worker Proxy & Python Engine..."
+            ENCODED_STREAM=$(node -e "console.log(encodeURIComponent(process.argv[1]))" "$STREAM_URL")
+            PROXY_MASTER="https://jkt48-live-watcher.chandra02new.workers.dev/api/proxy/stream.m3u8?url=${ENCODED_STREAM}"
 
-            # Strategy 2: Python Engine Direct (with Indonesian spoof headers)
+            # Strategy 1: Python Engine via Cloudflare Worker Proxy (with SOCKS5 WARP egress)
+            echo "Strategy 1: Python Engine via Cloudflare Worker Proxy (WARP)..."
+            python scripts/capture_hls.py "$PROXY_MASTER" "raw_segments/rec_part_000.ts" "$REC_DUR" "$RECORDING_ID" "$SUPABASE_URL" "$SUPABASE_KEY" "127.0.0.1" "40000" || true
+
+            # Strategy 2: Python Engine via Cloudflare Worker Proxy Direct
             if [ ! -s "raw_segments/rec_part_000.ts" ]; then
-              echo "Strategy 2: Python Engine Direct..."
-              python scripts/capture_hls.py "$STREAM_URL" "raw_segments/rec_part_000.ts" "$REC_DUR" "$RECORDING_ID" "$SUPABASE_URL" "$SUPABASE_KEY" || true
+              echo "Strategy 2: Python Engine via Cloudflare Worker Proxy Direct..."
+              python scripts/capture_hls.py "$PROXY_MASTER" "raw_segments/rec_part_000.ts" "$REC_DUR" "$RECORDING_ID" "$SUPABASE_URL" "$SUPABASE_KEY" || true
             fi
 
-            # Strategy 3: streamlink via SOCKS5 WARP
+            # Strategy 3: streamlink via Cloudflare Worker Proxy
             if [ ! -s "raw_segments/rec_part_000.ts" ]; then
-              echo "Strategy 3: streamlink via SOCKS5 WARP..."
-              timeout "${REC_DUR}s" streamlink --http-proxy "socks5h://127.0.0.1:40000" --hls-live-restart \
+              echo "Strategy 3: streamlink via Cloudflare Worker Proxy..."
+              timeout "${REC_DUR}s" streamlink --hls-live-restart \
                 --http-header "Origin=https://www.idn.app" \
                 --http-header "Referer=https://www.idn.app/" \
                 --http-header "User-Agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36" \
-                "$STREAM_URL" best -o "raw_segments/rec_part_000.ts" || true
+                "$PROXY_MASTER" best -o "raw_segments/rec_part_000.ts" || true
             fi
 
-            # Strategy 4: yt-dlp via SOCKS5 WARP
+            # Strategy 4: yt-dlp via Cloudflare Worker Proxy
             if [ ! -s "raw_segments/rec_part_000.ts" ]; then
-              echo "Strategy 4: yt-dlp via SOCKS5 WARP..."
-              timeout "${REC_DUR}s" yt-dlp --proxy "socks5://127.0.0.1:40000" \
+              echo "Strategy 4: yt-dlp via Cloudflare Worker Proxy..."
+              timeout "${REC_DUR}s" yt-dlp \
                 --add-header "Origin:https://www.idn.app" \
                 --add-header "Referer:https://www.idn.app/" \
                 --hls-use-mpegts \
-                -o "raw_segments/rec_part_000.ts" "$STREAM_URL" || true
+                -o "raw_segments/rec_part_000.ts" "$PROXY_MASTER" || true
             fi
           else
             # Showroom recording
