@@ -22,6 +22,11 @@ on:
         required: true
         default: 'https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8'
 
+      duration:
+        description: 'Duration in seconds (0 for indefinite live recording)'
+        required: false
+        default: '0'
+
 jobs:
   record:
     name: Record and Archive Live Stream
@@ -56,11 +61,13 @@ jobs:
             echo "MEMBER_NAME=${{ github.event.inputs.member_name }}" >> $GITHUB_ENV
             echo "PLATFORM=${{ github.event.inputs.platform }}" >> $GITHUB_ENV
             echo "STREAM_URL=${{ github.event.inputs.stream_url }}" >> $GITHUB_ENV
+            echo "DURATION=${{ github.event.inputs.duration || '0' }}" >> $GITHUB_ENV
           else
             echo "RECORDING_ID=${{ github.event.client_payload.recording_id }}" >> $GITHUB_ENV
             echo "MEMBER_NAME=${{ github.event.client_payload.member_name }}" >> $GITHUB_ENV
             echo "PLATFORM=${{ github.event.client_payload.platform }}" >> $GITHUB_ENV
             echo "STREAM_URL=${{ github.event.client_payload.stream_url }}" >> $GITHUB_ENV
+            echo "DURATION=${{ github.event.client_payload.duration || '0' }}" >> $GITHUB_ENV
           fi
 
       - name: Notify Recording Started (Supabase)
@@ -88,6 +95,7 @@ jobs:
         run: |
           echo "Starting recording for $MEMBER_NAME ($PLATFORM)..."
           echo "Stream URL: $STREAM_URL"
+          echo "Duration Limit: ${DURATION:-0}s (0 = indefinite)"
           
           SAFE_NAME=$(echo "$MEMBER_NAME" | tr -dc '[:alnum:]\n\r' | tr '[:upper:]' '[:lower:]')
           TIMESTAMP=$(date +%Y%m%d_%H%M%S)
@@ -146,8 +154,35 @@ jobs:
             REC_PID=$!
           fi
 
-          trap "echo 'Graceful stop signal received. Stopping recorder...'; kill -INT \$REC_PID 2>/dev/null || true; wait \$REC_PID 2>/dev/null || true; exit 0" SIGINT SIGTERM
+          # Background loop monitoring stop signal from Supabase
+          (
+            while true; do
+              sleep 3
+              CURRENT_STATUS=$(curl -s "${SUPABASE_URL}/rest/v1/recordings?id=eq.${RECORDING_ID}&select=status" \
+                -H "apikey: ${SUPABASE_KEY}" \
+                -H "Authorization: Bearer ${SUPABASE_KEY}" | jq -r '.[0].status' 2>/dev/null || echo "")
+              if [ "$CURRENT_STATUS" = "uploading" ] || [ "$CURRENT_STATUS" = "stopping" ]; then
+                echo "Stop signal ('$CURRENT_STATUS') detected in Supabase. Stopping recorder cleanly..."
+                kill -INT "$REC_PID" 2>/dev/null || true
+                break
+              fi
+            done
+          ) &
+          MONITOR_PID=$!
+
+          # Optional duration timer
+          if [ "${DURATION:-0}" -gt 0 ]; then
+            (
+              sleep "$DURATION"
+              echo "Target duration of ${DURATION}s reached. Stopping recorder cleanly..."
+              kill -INT "$REC_PID" 2>/dev/null || true
+            ) &
+            TIMER_PID=$!
+          fi
+
+          trap "echo 'Graceful stop signal received. Stopping recorder...'; kill -INT \$REC_PID 2>/dev/null || true; wait \$REC_PID 2>/dev/null || true; kill \$MONITOR_PID \$TIMER_PID 2>/dev/null || true; exit 0" SIGINT SIGTERM
           wait $REC_PID || true
+          kill "$MONITOR_PID" "$TIMER_PID" 2>/dev/null || true
 
           # If initial attempt produced 0 segments, try FFmpeg fallback
           shopt -s nullglob
