@@ -542,14 +542,16 @@ export default function SettingsView({
                 Munculkan popup banner notifikasi saat member sedang siaran
               </p>
             </div>
-            <label className="relative inline-flex items-center cursor-pointer min-h-[44px]">
+            <label className="relative inline-flex items-center cursor-pointer">
               <input
                 type="checkbox"
                 checked={enableBrowserNotification}
                 onChange={(e) => setEnableBrowserNotification(e.target.checked)}
-                className="sr-only peer"
+                className="sr-only"
               />
-              <div className="w-11 h-6 bg-[#E8E1D5] peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[12px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#3D5E52] shadow-inner"></div>
+              <div className={`w-11 h-6 rounded-full transition-colors relative cursor-pointer ${enableBrowserNotification ? 'bg-[#3D5E52]' : 'bg-[#E8E1D5]'}`}>
+                <div className={`w-5 h-5 bg-white rounded-full shadow-xs absolute top-0.5 transition-all duration-200 ${enableBrowserNotification ? 'left-[22px]' : 'left-[2px]'}`} />
+              </div>
             </label>
           </div>
         </div>

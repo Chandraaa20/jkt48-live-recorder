@@ -73,7 +73,10 @@ export default function LiveView({
             <h2 className="text-xl font-bold text-[#2B2522] tracking-tight">
               Sedang Live Sekarang
             </h2>
-            <span className="w-2.5 h-2.5 rounded-full bg-[#C94A3D] animate-ping" />
+            <span className="relative flex h-2.5 w-2.5">
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#C94A3D] opacity-75"></span>
+              <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-[#C94A3D]"></span>
+            </span>
           </div>
           <p className="text-xs text-[#6D655F] mt-0.5">
             Streaming langsung dari IDN Live & Showroom

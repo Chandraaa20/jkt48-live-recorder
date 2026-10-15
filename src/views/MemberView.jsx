@@ -286,8 +286,8 @@ export default function MemberView({
                   </div>
 
                   {/* Right: Quick Action Toggles & Edit/Delete */}
-                  <div className="flex items-center space-x-2 shrink-0">
-                    {/* Auto-Record Toggle Button (Min Touch Target 44px) */}
+                  <div className="flex items-center space-x-1.5 shrink-0">
+                    {/* Auto-Record Toggle Button */}
                     <button
                       onClick={() => onToggleAutoRecord(member.id, member.is_auto_record)}
                       title={
@@ -295,19 +295,19 @@ export default function MemberView({
                           ? 'Auto-Record Aktif (Klik untuk mematikan)'
                           : 'Auto-Record Mati (Klik untuk mengaktifkan)'
                       }
-                      className={`min-h-[44px] min-w-[50px] px-2 py-1.5 rounded-xl border flex flex-col items-center justify-center transition-all ${
+                      className={`w-[54px] h-10 rounded-xl border flex flex-col items-center justify-center transition-all cursor-pointer ${
                         member.is_auto_record
                           ? 'bg-[#EAF1EE] border-[#BED5CC] text-[#2D4A3F] shadow-xs'
                           : 'bg-[#FAF8F2] border-[#E8E1D5] text-[#A1988F] hover:text-[#2B2522] hover:bg-[#F4EFE7]'
                       }`}
                     >
-                      <Video className="w-3.5 h-3.5" />
+                      <Video className="w-3.5 h-3.5 shrink-0" />
                       <span className="text-[9px] font-bold mt-0.5 leading-none">
                         {member.is_auto_record ? 'REC ON' : 'REC OFF'}
                       </span>
                     </button>
 
-                    {/* Notify Toggle Button (Min Touch Target 44px) */}
+                    {/* Notify Toggle Button */}
                     <button
                       onClick={() => onToggleNotify(member.id, member.is_notify)}
                       title={
@@ -315,13 +315,13 @@ export default function MemberView({
                           ? 'Notifikasi Aktif (Klik untuk mematikan)'
                           : 'Notifikasi Mati (Klik untuk mengaktifkan)'
                       }
-                      className={`min-h-[44px] min-w-[46px] px-2 py-1.5 rounded-xl border flex flex-col items-center justify-center transition-all ${
+                      className={`w-[48px] h-10 rounded-xl border flex flex-col items-center justify-center transition-all cursor-pointer ${
                         member.is_notify
                           ? 'bg-[#FAF0E6] border-[#ECD9C8] text-[#8C4A36] shadow-xs'
                           : 'bg-[#FAF8F2] border-[#E8E1D5] text-[#A1988F] hover:text-[#2B2522] hover:bg-[#F4EFE7]'
                       }`}
                     >
-                      <Bell className="w-3.5 h-3.5" />
+                      <Bell className="w-3.5 h-3.5 shrink-0" />
                       <span className="text-[9px] font-bold mt-0.5 leading-none">
                         {member.is_notify ? 'ON' : 'OFF'}
                       </span>
@@ -330,10 +330,10 @@ export default function MemberView({
                     {/* Edit button */}
                     <button
                       onClick={() => onOpenEditModal(member)}
-                      className="min-h-[44px] min-w-[36px] flex items-center justify-center p-2 rounded-xl text-[#8A8179] hover:text-[#2B2522] hover:bg-[#FAF8F2] transition-colors"
+                      className="w-9 h-10 flex items-center justify-center rounded-xl text-[#8A8179] hover:text-[#2B2522] hover:bg-[#FAF8F2] border border-transparent hover:border-[#E8E1D5] transition-all cursor-pointer"
                       title="Edit Member"
                     >
-                      <Edit2 className="w-4 h-4" />
+                      <Edit2 className="w-3.5 h-3.5" />
                     </button>
 
                     {/* Delete button */}
@@ -343,10 +343,10 @@ export default function MemberView({
                           onDeleteMember(member.id);
                         }
                       }}
-                      className="min-h-[44px] min-w-[36px] flex items-center justify-center p-2 rounded-xl text-[#8A8179] hover:text-[#8C4A36] hover:bg-[#FAF0E6] transition-colors"
+                      className="w-9 h-10 flex items-center justify-center rounded-xl text-[#8A8179] hover:text-[#8C4A36] hover:bg-[#FAF0E6] border border-transparent hover:border-[#ECD9C8] transition-all cursor-pointer"
                       title="Hapus Member"
                     >
-                      <Trash2 className="w-4 h-4" />
+                      <Trash2 className="w-3.5 h-3.5" />
                     </button>
                   </div>
                 </div>

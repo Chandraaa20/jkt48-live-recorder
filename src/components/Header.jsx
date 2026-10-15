@@ -31,15 +31,15 @@ export default function Header({
         </div>
 
         {/* Right side status & refresh */}
-        <div className="flex items-center space-x-2">
+        <div className="flex items-center space-x-2 shrink-0">
           {/* Live badge count */}
           {activeLivesCount > 0 ? (
-            <div className="flex items-center space-x-1.5 px-3 py-1 rounded-full bg-[#FAF0E6] border border-[#ECD9C8] text-[#8C4A36] text-xs font-semibold shadow-xs">
+            <div className="flex items-center space-x-1.5 px-3 h-[38px] rounded-xl bg-[#FAF0E6] border border-[#ECD9C8] text-[#8C4A36] text-xs font-semibold shadow-xs">
               <span className="w-2 h-2 rounded-full bg-[#C94A3D] rec-pulse"></span>
               <span>{activeLivesCount} Live</span>
             </div>
           ) : (
-            <div className="flex items-center space-x-1.5 px-3 py-1 rounded-full bg-[#F4EFE7] border border-[#E8E1D5] text-[#6D655F] text-xs font-medium">
+            <div className="flex items-center space-x-1.5 px-3 h-[38px] rounded-xl bg-[#F4EFE7] border border-[#E8E1D5] text-[#6D655F] text-xs font-medium">
               <span className="w-1.5 h-1.5 rounded-full bg-[#B6ACA3]"></span>
               <span>0 Live</span>
             </div>
@@ -48,7 +48,7 @@ export default function Header({
           {/* Connection status pill */}
           <div 
             title={isConnected ? "Terhubung ke Supabase" : "Mode Offline / Lokal"}
-            className={`p-2 rounded-xl border text-xs flex items-center justify-center min-w-[38px] min-h-[38px] transition-colors ${
+            className={`w-[38px] h-[38px] rounded-xl border text-xs flex items-center justify-center transition-colors shrink-0 ${
               isConnected 
                 ? 'bg-[#EAF1EE] text-[#3D5E52] border-[#BED5CC]' 
                 : 'bg-[#FAF0E6] text-[#8C4A36] border-[#ECD9C8]'
@@ -62,7 +62,7 @@ export default function Header({
             onClick={onRefresh}
             disabled={isRefreshing}
             aria-label="Refresh Data"
-            className="p-2 rounded-xl bg-white hover:bg-[#FAF8F2] border border-[#E8E1D5] text-[#2B2522] hover:text-[#3D5E52] active:scale-95 transition-all shadow-xs disabled:opacity-50 min-w-[38px] min-h-[38px] flex items-center justify-center"
+            className="w-[38px] h-[38px] rounded-xl bg-white hover:bg-[#FAF8F2] border border-[#E8E1D5] text-[#2B2522] hover:text-[#3D5E52] active:scale-95 transition-all shadow-xs disabled:opacity-50 flex items-center justify-center shrink-0 cursor-pointer"
           >
             <RefreshCw className={`w-4 h-4 ${isRefreshing ? 'animate-spin text-[#3D5E52]' : ''}`} />
           </button>
