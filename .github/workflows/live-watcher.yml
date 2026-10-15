@@ -1,0 +1,39 @@
+name: JKT48 24/7 Cloud Live Watcher & Auto-Record Dispatcher
+
+on:
+  schedule:
+    # Run every 5 minutes 24/7 automatically in GitHub Actions cloud
+    - cron: '*/5 * * * *'
+  workflow_dispatch:
+    # Allows manual testing trigger from GitHub Actions tab
+
+concurrency:
+  group: live-watcher
+  cancel-in-progress: false
+
+jobs:
+  watch:
+    name: Check Active Lives & Dispatch Recorder
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Run Cloud Watcher & Auto-Record Dispatcher
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL || 'https://rugjqcvwlfkonziykita.supabase.co' }}
+          SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJ1Z2pxY3Z3bGZrb256aXlraXRhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTE5ODQyNzUsImV4cCI6MjEwNzU2MDI3NX0.g6RFp4Ykir52EvdCpbZfZfyeoKGb5ohwLTD2YjkYNE8' }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN || '8984988206:AAEpkoy-TRN6HGg0Uk_MI67Pon7gJiucEuU' }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID || '-1004418157265' }}
+          GITHUB_TOKEN: ${{ secrets.GH_PAT || secrets.GITHUB_TOKEN }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+        run: |
+          node cloud-backend/github-watcher.js

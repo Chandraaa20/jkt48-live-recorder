@@ -423,18 +423,26 @@ export async function syncRealActiveLives() {
       const platform = isSr ? 'showroom' : (isIdn ? 'idn' : 'other');
 
       const roomId = String(item.room_id || item.room_url_key || '');
-      const idnSlug = (item.slug || item.username || '').toLowerCase().replace(/^@/, '');
+      const idnKey = (item.url_key || item.username || '').toLowerCase().replace(/^@/, '');
+      const cleanLiveName = (item.name || '').replace(/jkt48/gi, '').trim().toLowerCase();
 
-      // Match against member_platforms or member name
-      const matched = currentMembers.find((m) => {
-        return (
-          (m.platforms || []).some((p) => {
-            if (p.platform === 'showroom' && roomId && String(p.external_id) === roomId) return true;
-            if (p.platform === 'idn' && idnSlug && (p.external_id?.toLowerCase() === idnSlug || p.room_url_key?.toLowerCase() === idnSlug)) return true;
-            return false;
-          }) || (item.name && m.name?.toLowerCase().includes(item.name.toLowerCase()))
-        );
+      // 1. Strict platform identifier match (IDN url_key or Showroom room_id)
+      let matched = currentMembers.find((m) => {
+        return (m.platforms || []).some((p) => {
+          if (p.platform === 'showroom' && roomId && String(p.external_id) === roomId) return true;
+          if (p.platform === 'idn' && idnKey && (p.external_id?.toLowerCase() === idnKey || p.room_url_key?.toLowerCase() === idnKey)) return true;
+          return false;
+        });
       });
+
+      // 2. Fallback: Exact name or nickname match (avoid partial substring collisions)
+      if (!matched && cleanLiveName) {
+        matched = currentMembers.find((m) => {
+          const nick = (m.nickname || '').toLowerCase();
+          const fullName = m.name.toLowerCase();
+          return nick === cleanLiveName || fullName === cleanLiveName || fullName.split(' ').includes(cleanLiveName);
+        });
+      }
 
       if (!matched) continue;
 
@@ -455,12 +463,12 @@ export async function syncRealActiveLives() {
 
       if (streamUrl) {
         activeMatched.push({
-          id: `live-real-${matched.id}-${platform}`,
+          id: matched.id,
           member_id: matched.id,
           platform,
-          title: item.title || `Live streaming ${matched.name}`,
+          title: item.title || item.slug || `Live streaming ${matched.name}`,
           stream_url: streamUrl,
-          thumbnail_url: item.image || item.img_alt || matched.avatar_url,
+          thumbnail_url: item.image || item.img_alt || item.img || matched.avatar_url,
           started_at: item.started_at ? new Date(item.started_at).toISOString() : new Date().toISOString(),
           is_recording: false,
           is_simulated: false,
@@ -469,9 +477,10 @@ export async function syncRealActiveLives() {
       }
     }
 
-    // Send notifications for newly detected live sessions where member has is_notify === true
+    // Process notifications & auto-record triggers for active live sessions
     const notifiedIds = getNotifiedLives();
     for (const realLive of activeMatched) {
+      // 1. Instant Telegram & Device Push Notification if member.is_notify === true
       if (realLive.member?.is_notify !== false && !notifiedIds.includes(realLive.id)) {
         markLiveNotified(realLive.id);
 
@@ -499,6 +508,24 @@ export async function syncRealActiveLives() {
         sendDeviceNotification(`🔴 ${realLive.member.name} Sedang Live!`, {
           body: `${platformName}: ${realLive.title}`,
           icon: realLive.member?.avatar_url || realLive.thumbnail_url,
+        });
+      }
+
+      // 2. Instant Auto-Record Trigger if member.is_auto_record === true
+      if (realLive.member?.is_auto_record === true && !realLive.is_recording) {
+        realLive.is_recording = true;
+        console.log(`[AutoRecord] Automatically starting cloud recording for ${realLive.member.name}...`);
+        triggerManualRecord(
+          realLive.id,
+          realLive.member_id,
+          realLive.title,
+          realLive.platform,
+          realLive.member.name,
+          realLive.stream_url
+        ).then((res) => {
+          console.log(`[AutoRecord] Recording started for ${realLive.member.name}:`, res);
+        }).catch((err) => {
+          console.error(`[AutoRecord] Failed to start recording for ${realLive.member.name}:`, err);
         });
       }
     }

@@ -13,6 +13,62 @@ import {
   CheckCircle2,
 } from './Icons';
 
+import { getAppConfig } from '../services/supabase';
+
+// Resolve appropriate CORS Proxy URL (Local Vite Proxy or Cloudflare Worker)
+function getProxyUrl(targetUrl) {
+  if (!targetUrl) return '';
+  const config = getAppConfig();
+  const workerBase = config.workerUrl ? config.workerUrl.replace(/\/$/, '') : '';
+
+  if (typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')) {
+    return `/api/proxy?url=${encodeURIComponent(targetUrl)}`;
+  }
+  if (workerBase) {
+    return `${workerBase}/api/proxy?url=${encodeURIComponent(targetUrl)}`;
+  }
+  return `https://jkt48-live-watcher.chandra02new.workers.dev/api/proxy?url=${encodeURIComponent(targetUrl)}`;
+}
+
+// Fetch fresh stream URL from live aggregator to avoid expired tokens
+async function fetchFreshStreamUrl(currentLive) {
+  try {
+    let lives = [];
+    const proxyCheck = `/api/proxy?url=${encodeURIComponent('https://api.crstlnz.my.id/api/now_live?group=jkt48')}`;
+    try {
+      const res = await fetch(proxyCheck);
+      if (res.ok) lives = await res.json();
+    } catch (_) {
+      const direct = await fetch('https://api.crstlnz.my.id/api/now_live?group=jkt48');
+      if (direct.ok) lives = await direct.json();
+    }
+
+    if (Array.isArray(lives) && lives.length > 0) {
+      const idnSlug = (currentLive.room_url_key || currentLive.member?.platforms?.find(p => p.platform === 'idn')?.external_id || '').toLowerCase();
+      const targetName = (currentLive.member?.name || currentLive.title || '').replace(/jkt48/gi, '').trim().toLowerCase();
+
+      const found = lives.find(l => {
+        const itemKey = (l.url_key || l.username || '').toLowerCase();
+        if (idnSlug && itemKey && (itemKey === idnSlug || idnSlug.includes(itemKey))) return true;
+        if (currentLive.platform === 'showroom' && l.room_id && String(l.room_id) === String(currentLive.room_id)) return true;
+        if (l.name) {
+          const lName = l.name.replace(/jkt48/gi, '').trim().toLowerCase();
+          if (targetName && (targetName.includes(lName) || lName.includes(targetName))) return true;
+        }
+        return false;
+      });
+
+      if (found && found.streaming_url_list && found.streaming_url_list.length > 0) {
+        const sorted = [...found.streaming_url_list].sort((a, b) => (b.quality || 0) - (a.quality || 0));
+        return sorted[0].url;
+      }
+    }
+  } catch (e) {
+    console.warn('fetchFreshStreamUrl note:', e);
+  }
+  return currentLive.stream_url;
+}
+
 export default function LivePlayerModal({
   live,
   isOpen,
@@ -21,6 +77,7 @@ export default function LivePlayerModal({
 }) {
   const videoRef = useRef(null);
   const hlsRef = useRef(null);
+  const attemptRef = useRef(1);
 
   const [isPlaying, setIsPlaying] = useState(true);
   const [isMuted, setIsMuted] = useState(false);
@@ -28,6 +85,151 @@ export default function LivePlayerModal({
   const [errorMsg, setErrorMsg] = useState(null);
   const [isRecordingLoading, setIsRecordingLoading] = useState(false);
   const [recordingSuccess, setRecordingSuccess] = useState(false);
+  const [activeUrl, setActiveUrl] = useState('');
+
+  // Start playback with triple-fallback engine
+  const startPlayback = (targetUrl, attempt = 1) => {
+    attemptRef.current = attempt;
+    setIsLoading(true);
+    setErrorMsg(null);
+
+    const video = videoRef.current;
+    if (!video) return;
+
+    // Clean up previous HLS instance
+    if (hlsRef.current) {
+      hlsRef.current.destroy();
+      hlsRef.current = null;
+    }
+    video.removeAttribute('src');
+
+    console.log(`[LivePlayer] Attempt ${attempt}:`, attempt === 1 ? 'HLS.js Direct' : attempt === 2 ? 'Native HTML5 Video' : 'HLS.js CORS Proxy');
+
+    // ATTEMPT 1: Hls.js Direct
+    if (attempt === 1) {
+      if (Hls.isSupported()) {
+        const hls = new Hls({
+          enableWorker: true,
+          lowLatencyMode: true,
+          backBufferLength: 60,
+          xhrSetup: (xhr) => {
+            xhr.withCredentials = false;
+          },
+        });
+        hlsRef.current = hls;
+
+        hls.loadSource(targetUrl);
+        hls.attachMedia(video);
+
+        hls.on(Hls.Events.MANIFEST_PARSED, () => {
+          setIsLoading(false);
+          video.play().catch(() => {
+            video.muted = true;
+            setIsMuted(true);
+            video.play().catch((e) => console.log('Autoplay retry:', e));
+          });
+        });
+
+        hls.on(Hls.Events.ERROR, (event, data) => {
+          if (data.fatal) {
+            console.warn('[LivePlayer] Attempt 1 Hls.js failed, switching to Attempt 2 (Native):', data);
+            hls.destroy();
+            hlsRef.current = null;
+            startPlayback(targetUrl, 2);
+          }
+        });
+        return;
+      } else {
+        startPlayback(targetUrl, 2);
+        return;
+      }
+    }
+
+    // ATTEMPT 2: Native HTML5 Video (Android System WebView & Safari support)
+    if (attempt === 2) {
+      video.src = targetUrl;
+      video.load();
+
+      let settled = false;
+
+      const onPlaying = () => {
+        settled = true;
+        setIsLoading(false);
+        video.removeEventListener('playing', onPlaying);
+        video.removeEventListener('error', onError);
+      };
+
+      const onError = (e) => {
+        if (settled) return;
+        settled = true;
+        console.warn('[LivePlayer] Attempt 2 Native Video failed, switching to Attempt 3 (CORS Proxy):', e);
+        video.removeEventListener('playing', onPlaying);
+        video.removeEventListener('error', onError);
+        startPlayback(targetUrl, 3);
+      };
+
+      video.addEventListener('playing', onPlaying);
+      video.addEventListener('error', onError);
+
+      video.play().catch(() => {
+        video.muted = true;
+        setIsMuted(true);
+        video.play().catch(() => {
+          if (!settled && attemptRef.current === 2) {
+            settled = true;
+            startPlayback(targetUrl, 3);
+          }
+        });
+      });
+      return;
+    }
+
+    // ATTEMPT 3: CORS Proxy (Proxies master playlist and rewrites segments with CORS headers)
+    if (attempt === 3) {
+      const proxiedUrl = getProxyUrl(targetUrl);
+      console.log('[LivePlayer] Playing via CORS Proxy:', proxiedUrl);
+
+      if (Hls.isSupported()) {
+        const hls = new Hls({
+          enableWorker: true,
+          lowLatencyMode: true,
+          backBufferLength: 60,
+        });
+        hlsRef.current = hls;
+
+        hls.loadSource(proxiedUrl);
+        hls.attachMedia(video);
+
+        hls.on(Hls.Events.MANIFEST_PARSED, () => {
+          setIsLoading(false);
+          video.play().catch(() => {
+            video.muted = true;
+            setIsMuted(true);
+            video.play().catch(() => {});
+          });
+        });
+
+        hls.on(Hls.Events.ERROR, (event, data) => {
+          if (data.fatal) {
+            console.error('[LivePlayer] All 3 attempts failed:', data);
+            hls.destroy();
+            hlsRef.current = null;
+            setIsLoading(false);
+            setErrorMsg('Gagal memuat stream live. Siaran mungkin telah berakhir atau koneksi server CDN terputus.');
+          }
+        });
+      } else {
+        video.src = proxiedUrl;
+        video.load();
+        video.play().then(() => {
+          setIsLoading(false);
+        }).catch(() => {
+          setIsLoading(false);
+          setErrorMsg('Browser Anda tidak mendukung pemutar video stream ini.');
+        });
+      }
+    }
+  };
 
   useEffect(() => {
     if (!isOpen || !live) {
@@ -38,77 +240,17 @@ export default function LivePlayerModal({
       return;
     }
 
-    const video = videoRef.current;
-    if (!video) return;
+    let isSubscribed = true;
 
-    setIsLoading(true);
-    setErrorMsg(null);
-
-    const streamUrl = live.stream_url;
-
-    // 1. Check HLS.js support (Android / Chrome / Firefox)
-    if (Hls.isSupported()) {
-      const hls = new Hls({
-        enableWorker: true,
-        lowLatencyMode: true,
-        backBufferLength: 60,
-      });
-      hlsRef.current = hls;
-
-      hls.loadSource(streamUrl);
-      hls.attachMedia(video);
-
-      hls.on(Hls.Events.MANIFEST_PARSED, () => {
-        setIsLoading(false);
-        video.play().catch(() => {
-          // Auto-play was prevented by browser policy (mute and retry)
-          video.muted = true;
-          setIsMuted(true);
-          video.play().catch((e) => console.log('Autoplay failed:', e));
-        });
-      });
-
-      hls.on(Hls.Events.ERROR, (event, data) => {
-        console.warn('HLS Event Error:', data);
-        if (data.fatal) {
-          switch (data.type) {
-            case Hls.ErrorTypes.NETWORK_ERROR:
-              setErrorMsg('Gagal memuat stream: Kendala jaringan atau CORS.');
-              hls.startLoad();
-              break;
-            case Hls.ErrorTypes.MEDIA_ERROR:
-              setErrorMsg('Kesalahan format media stream.');
-              hls.recoverMediaError();
-              break;
-            default:
-              setErrorMsg('Stream offline atau tautan .m3u8 tidak dapat diputar.');
-              hls.destroy();
-              break;
-          }
-        }
-      });
-    }
-    // 2. Check native HLS support (Safari / iOS)
-    else if (video.canPlayType('application/vnd.apple.mpegurl')) {
-      video.src = streamUrl;
-      video.addEventListener('loadedmetadata', () => {
-        setIsLoading(false);
-        video.play().catch(() => {
-          video.muted = true;
-          setIsMuted(true);
-          video.play();
-        });
-      });
-      video.addEventListener('error', () => {
-        setErrorMsg('Gagal memutar video live stream.');
-        setIsLoading(false);
-      });
-    } else {
-      setErrorMsg('Browser Anda tidak mendukung pemutar video HLS (.m3u8).');
-      setIsLoading(false);
-    }
+    // Fetch fresh stream URL on modal open to avoid stale playback tokens
+    fetchFreshStreamUrl(live).then((freshUrl) => {
+      if (!isSubscribed) return;
+      setActiveUrl(freshUrl || live.stream_url);
+      startPlayback(freshUrl || live.stream_url, 1);
+    });
 
     return () => {
+      isSubscribed = false;
       if (hlsRef.current) {
         hlsRef.current.destroy();
         hlsRef.current = null;
@@ -343,10 +485,10 @@ export default function LivePlayerModal({
           {/* Quick links & info */}
           <div className="flex items-center justify-between text-xs text-[#6D655F] pt-1">
             <span className="truncate max-w-[200px]">
-              URL: {live.stream_url ? live.stream_url.substring(0, 32) + '...' : '-'}
+              URL: {(activeUrl || live.stream_url) ? (activeUrl || live.stream_url).substring(0, 32) + '...' : '-'}
             </span>
             <a
-              href={live.stream_url}
+              href={activeUrl || live.stream_url}
               target="_blank"
               rel="noreferrer"
               className="inline-flex items-center space-x-1 text-[#3D5E52] hover:underline font-bold"

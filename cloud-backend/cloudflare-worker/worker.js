@@ -44,22 +44,20 @@ class IdnAdapter extends BasePlatformAdapter {
         // The API returns an array of live objects for both IDN and Showroom
         for (const item of (Array.isArray(data) ? data : [])) {
           const type = (item.type || item.platform || '').toLowerCase();
-          if (type.includes('idn') || item.stream_url?.includes('idn')) {
-            const externalId = item.username || item.slug || item.room_id || '';
+            const externalId = item.url_key || item.username || '';
             const streamUrl = item.stream_url || item.streaming_url_list?.[0]?.url || '';
 
-            if (streamUrl) {
+            if (streamUrl && externalId) {
               lives.push({
                 platform: 'idn',
                 external_id: String(externalId).toLowerCase().replace(/^@/, ''),
-                room_url_key: item.slug || item.username || '',
-                title: item.title || 'IDN Live Streaming',
+                room_url_key: item.url_key || item.slug || item.username || '',
+                title: item.title || item.slug || 'IDN Live Streaming',
                 stream_url: streamUrl,
                 thumbnail_url: item.image || item.img_alt || item.avatar || '',
                 started_at: item.started_at || new Date().toISOString(),
               });
             }
-          }
         }
       }
     } catch (err) {
@@ -509,6 +507,89 @@ export async function processLiveStreams(env) {
   };
 }
 
+// Helper: Proxy HLS playlists (.m3u8) and video segments (.ts) with CORS headers & Referer spoofing
+async function handleHlsProxy(request, env, corsHeaders) {
+  const urlObj = new URL(request.url);
+  const targetUrl = urlObj.searchParams.get('url');
+
+  if (!targetUrl) {
+    return new Response('Missing ?url= parameter', {
+      status: 400,
+      headers: { ...corsHeaders, 'Content-Type': 'text/plain' },
+    });
+  }
+
+  try {
+    let referer = 'https://www.idn.app/';
+    if (targetUrl.includes('showroom') || targetUrl.includes('sr-')) {
+      referer = 'https://www.showroom-live.com/';
+    }
+
+    const upstreamRes = await fetch(targetUrl, {
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+        'Referer': referer,
+      },
+    });
+
+    if (!upstreamRes.ok) {
+      return new Response(`Upstream error: ${upstreamRes.status}`, {
+        status: upstreamRes.status,
+        headers: { ...corsHeaders, 'Content-Type': 'text/plain' },
+      });
+    }
+
+    const contentType = upstreamRes.headers.get('content-type') || '';
+    const isPlaylist = targetUrl.includes('.m3u8') || contentType.includes('mpegurl') || contentType.includes('application/x-mpegURL');
+
+    if (isPlaylist) {
+      const text = await upstreamRes.text();
+      const baseUrl = new URL(targetUrl);
+      const proxyBase = `${urlObj.origin}/api/proxy?url=`;
+
+      // Rewrite nested variant stream URLs or chunk URLs
+      const rewritten = text.split('\n').map(line => {
+        const trimmed = line.trim();
+        if (!trimmed || trimmed.startsWith('#')) {
+          if (trimmed.includes('URI="')) {
+            return trimmed.replace(/URI="([^"]+)"/g, (match, uri) => {
+              const absUrl = new URL(uri, baseUrl).toString();
+              return `URI="${proxyBase}${encodeURIComponent(absUrl)}"`;
+            });
+          }
+          return line;
+        }
+        const absUrl = new URL(trimmed, baseUrl).toString();
+        return `${proxyBase}${encodeURIComponent(absUrl)}`;
+      }).join('\n');
+
+      return new Response(rewritten, {
+        status: 200,
+        headers: {
+          ...corsHeaders,
+          'Content-Type': 'application/vnd.apple.mpegurl',
+          'Cache-Control': 'no-cache, no-store, must-revalidate',
+        },
+      });
+    }
+
+    // Segment (.ts) or chunks
+    return new Response(upstreamRes.body, {
+      status: 200,
+      headers: {
+        ...corsHeaders,
+        'Content-Type': contentType || 'video/MP2T',
+        'Cache-Control': 'public, max-age=3600',
+      },
+    });
+  } catch (err) {
+    return new Response(`Proxy error: ${err.message}`, {
+      status: 500,
+      headers: { ...corsHeaders, 'Content-Type': 'text/plain' },
+    });
+  }
+}
+
 // ==============================================================================
 // 4. CLOUDFLARE WORKER EXPORT (FETCH & SCHEDULED CRON)
 // ==============================================================================
@@ -530,6 +611,11 @@ export default {
     const pathname = url.pathname;
 
     try {
+      // 0. GET /api/proxy: CORS HLS & TS Stream Proxy
+      if (pathname === '/api/proxy') {
+        return await handleHlsProxy(request, env, corsHeaders);
+      }
+
       // 1. POST /api/trigger-record: Secure server-side GitHub dispatch
       if (request.method === 'POST' && pathname === '/api/trigger-record') {
         const body = await request.json().catch(() => ({}));
