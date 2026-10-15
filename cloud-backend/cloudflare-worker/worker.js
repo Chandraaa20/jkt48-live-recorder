@@ -561,16 +561,21 @@ async function handleHlsProxy(request, env, corsHeaders) {
 
   try {
     let referer = 'https://www.idn.app/';
+    let origin = 'https://www.idn.app';
     if (targetUrl.includes('showroom') || targetUrl.includes('sr-')) {
       referer = 'https://www.showroom-live.com/';
+      origin = 'https://www.showroom-live.com';
     }
+
+    const workerBase = 'https://jkt48-live-watcher.chandra02new.workers.dev';
 
     let upstreamRes = null;
     for (let attempt = 0; attempt < 4; attempt++) {
       upstreamRes = await fetch(targetUrl, {
         headers: {
-          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
           'Referer': referer,
+          'Origin': origin,
         },
       });
       if (upstreamRes.ok) break;
@@ -594,7 +599,7 @@ async function handleHlsProxy(request, env, corsHeaders) {
       const text = await upstreamRes.text();
       const baseUrl = new URL(targetUrl);
 
-      // Rewrite nested variant stream URLs or chunk URLs with explicit extension for FFmpeg and HLS players
+      // Rewrite nested variant stream URLs or chunk URLs with explicit extension for FFmpeg, streamlink, and HLS players
       const rewritten = text.split('\n').map(line => {
         const trimmed = line.trim();
         if (!trimmed || trimmed.startsWith('#')) {
@@ -602,14 +607,14 @@ async function handleHlsProxy(request, env, corsHeaders) {
             return trimmed.replace(/URI="([^"]+)"/g, (match, uri) => {
               const absUrl = new URL(uri, baseUrl).toString();
               const ext = absUrl.includes('.m3u8') ? '/stream.m3u8' : '/segment.ts';
-              return `URI="${urlObj.origin}/api/proxy${ext}?url=${encodeURIComponent(absUrl)}"`;
+              return `URI="${workerBase}/api/proxy${ext}?url=${encodeURIComponent(absUrl)}"`;
             });
           }
           return line;
         }
         const absUrl = new URL(trimmed, baseUrl).toString();
         const ext = absUrl.includes('.m3u8') ? '/stream.m3u8' : '/segment.ts';
-        return `${urlObj.origin}/api/proxy${ext}?url=${encodeURIComponent(absUrl)}`;
+        return `${workerBase}/api/proxy${ext}?url=${encodeURIComponent(absUrl)}`;
       }).join('\n');
 
       return new Response(rewritten, {

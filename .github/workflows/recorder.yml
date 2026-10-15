@@ -46,7 +46,7 @@ jobs:
       - name: Install Dependencies
         run: |
           sudo apt-get update -qq
-          sudo apt-get install -y ffmpeg curl jq bc
+          sudo apt-get install -y ffmpeg curl jq bc python3-pip streamlink || pip install --break-system-packages streamlink yt-dlp || true
 
       - name: Extract Input Parameters
         id: params
@@ -96,10 +96,7 @@ jobs:
 
           mkdir -p raw_segments
 
-          # Trap termination signals so running ffmpeg cleanly flushes
-          trap 'echo "Signal received, stopping ffmpeg cleanly..."; kill -INT "$FFMPEG_PID" 2>/dev/null' SIGTERM SIGINT
-
-          USER_AGENT="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+          USER_AGENT="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36"
           REFERER_URL="https://www.idn.app/"
           if [ "$PLATFORM" = "showroom" ]; then
             REFERER_URL="https://www.showroom-live.com/"
@@ -109,33 +106,50 @@ jobs:
           TARGET_URL="$STREAM_URL"
           if [ "$PLATFORM" = "idn" ] || [[ "$STREAM_URL" =~ live-video\.net ]]; then
             # Amazon IVS blocks datacenter IPs (Azure/GitHub Actions) with 403.
-            # Route immediately via Cloudflare Worker stream proxy.
+            # Route through Cloudflare Worker proxy and resolve child variant playlist directly.
             ENCODED_URL=$(node -e "console.log(encodeURIComponent(process.argv[1]))" "$STREAM_URL")
-            TARGET_URL="https://jkt48-live-watcher.chandra02new.workers.dev/api/proxy/stream.m3u8?url=${ENCODED_URL}"
-            echo "IDN Stream routed via Cloudflare Proxy: $TARGET_URL"
+            MASTER_PROXY="https://jkt48-live-watcher.chandra02new.workers.dev/api/proxy/stream.m3u8?url=${ENCODED_URL}"
+            echo "Master Proxy URL: $MASTER_PROXY"
+            
+            # Fetch variant playlist through Worker Proxy to obtain the direct child variant URL
+            CHILD_PROXY=$(curl -sL "$MASTER_PROXY" | grep -v '^#' | grep -E '^https?://' | head -n 1 || true)
+            if [ -n "$CHILD_PROXY" ]; then
+              TARGET_URL="$CHILD_PROXY"
+              echo "Resolved Child Playlist Proxy URL: $TARGET_URL"
+            else
+              TARGET_URL="$MASTER_PROXY"
+              echo "Using Master Playlist Proxy URL: $TARGET_URL"
+            fi
           else
             echo "Showroom Stream direct HLS: $TARGET_URL"
           fi
 
-          echo "Starting FFmpeg segment recording..."
-          ffmpeg -hide_banner -loglevel warning \
-            -user_agent "$USER_AGENT" \
-            -referer "$REFERER_URL" \
-            -reconnect 1 \
-            -reconnect_streamed 1 \
-            -reconnect_delay_max 5 \
-            -i "$TARGET_URL" \
-            -c copy \
-            -f segment \
-            -segment_time 3600 \
-            -reset_timestamps 1 \
-            "raw_segments/rec_part_%03d.ts" &
-          
-          FFMPEG_PID=$!
-          trap "echo 'Graceful stop signal received. Stopping ffmpeg...'; kill -INT \$FFMPEG_PID 2>/dev/null || true; wait \$FFMPEG_PID 2>/dev/null || true; exit 0" SIGINT SIGTERM
-          wait $FFMPEG_PID || true
+          echo "Starting recording engine..."
+          if command -v streamlink >/dev/null 2>&1; then
+            echo "Capturing stream using Streamlink..."
+            streamlink --http-header "Origin=$REFERER_URL" --http-header "Referer=$REFERER_URL" "$TARGET_URL" best -o "raw_segments/rec_part_000.ts" --retry-streams 5 --retry-open 5 &
+            REC_PID=$!
+          else
+            echo "Capturing stream using FFmpeg..."
+            ffmpeg -hide_banner -loglevel warning \
+              -user_agent "$USER_AGENT" \
+              -referer "$REFERER_URL" \
+              -reconnect 1 \
+              -reconnect_streamed 1 \
+              -reconnect_delay_max 5 \
+              -i "$TARGET_URL" \
+              -c copy \
+              -f segment \
+              -segment_time 3600 \
+              -reset_timestamps 1 \
+              "raw_segments/rec_part_%03d.ts" &
+            REC_PID=$!
+          fi
 
-          # If initial attempt produced 0 segments, try alternative
+          trap "echo 'Graceful stop signal received. Stopping recorder...'; kill -INT \$REC_PID 2>/dev/null || true; wait \$REC_PID 2>/dev/null || true; exit 0" SIGINT SIGTERM
+          wait $REC_PID || true
+
+          # If initial attempt produced 0 segments, try FFmpeg fallback
           shopt -s nullglob
           VALID_TS=()
           for f in raw_segments/*.ts; do
@@ -145,32 +159,25 @@ jobs:
           done
 
           if [ ${#VALID_TS[@]} -eq 0 ]; then
-            echo "First attempt produced 0 segments. Trying fallback..."
-            if [[ "$TARGET_URL" =~ workers\.dev ]]; then
-              FALLBACK_URL="$STREAM_URL"
-            else
-              ENCODED_URL=$(node -e "console.log(encodeURIComponent(process.argv[1]))" "$STREAM_URL")
-              FALLBACK_URL="https://jkt48-live-watcher.chandra02new.workers.dev/api/proxy/stream.m3u8?url=${ENCODED_URL}"
-            fi
+            echo "First attempt produced 0 segments. Trying FFmpeg fallback with proxy..."
             ffmpeg -hide_banner -loglevel warning \
               -user_agent "$USER_AGENT" \
               -referer "$REFERER_URL" \
               -reconnect 1 \
               -reconnect_streamed 1 \
               -reconnect_delay_max 5 \
-              -i "$FALLBACK_URL" \
+              -i "$TARGET_URL" \
               -c copy \
               -f segment \
               -segment_time 3600 \
               -reset_timestamps 1 \
               "raw_segments/rec_part_%03d.ts" &
-            
-            FFMPEG_PID=$!
-            trap "echo 'Graceful stop signal received in fallback. Stopping ffmpeg...'; kill -INT \$FFMPEG_PID 2>/dev/null || true; wait \$FFMPEG_PID 2>/dev/null || true; exit 0" SIGINT SIGTERM
-            wait $FFMPEG_PID || true
+            REC_PID=$!
+            trap "echo 'Graceful stop signal received in fallback. Stopping ffmpeg...'; kill -INT \$REC_PID 2>/dev/null || true; wait \$REC_PID 2>/dev/null || true; exit 0" SIGINT SIGTERM
+            wait $REC_PID || true
           fi
 
-          echo "FFmpeg recording step completed or stopped."
+          echo "Recording step completed or stopped."
 
       - name: Remux and Consolidate Video Segments
         if: always()
