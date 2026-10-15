@@ -131,6 +131,12 @@ jobs:
             echo "Strategy 1: Python Engine via Cloudflare Worker Proxy (WARP)..."
             python scripts/capture_hls.py "$PROXY_MASTER" "raw_segments/rec_part_000.ts" "$REC_DUR" "$RECORDING_ID" "$SUPABASE_URL" "$SUPABASE_KEY" "127.0.0.1" "40000" || true
 
+            # Strategy 1b: Python Engine Direct via SOCKS5 WARP (socks5h)
+            if [ ! -s "raw_segments/rec_part_000.ts" ]; then
+              echo "Strategy 1b: Python Engine Direct via SOCKS5 WARP..."
+              python scripts/capture_hls.py "$STREAM_URL" "raw_segments/rec_part_000.ts" "$REC_DUR" "$RECORDING_ID" "$SUPABASE_URL" "$SUPABASE_KEY" "127.0.0.1" "40000" || true
+            fi
+
             # Strategy 2: Python Engine via Cloudflare Worker Proxy Direct
             if [ ! -s "raw_segments/rec_part_000.ts" ]; then
               echo "Strategy 2: Python Engine via Cloudflare Worker Proxy Direct..."
