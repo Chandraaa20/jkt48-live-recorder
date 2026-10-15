@@ -64,10 +64,16 @@ jobs:
           fi
 
       - name: Notify Recording Started (Supabase)
-        env:
-          SUPABASE_URL: ${{ secrets.SUPABASE_URL || 'https://rugjqcvwlfkonziykita.supabase.co' }}
-          SUPABASE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY || secrets.SUPABASE_SERVICE_KEY || secrets.SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJ1Z2pxY3Z3bGZrb256aXlraXRhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTE5ODQyNzUsImV4cCI6MjEwNzU2MDI3NX0.g6RFp4Ykir52EvdCpbZfZfyeoKGb5ohwLTD2YjkYNE8' }}
         run: |
+          SUPABASE_URL="${{ secrets.SUPABASE_URL }}"
+          if [ -z "$SUPABASE_URL" ]; then
+            SUPABASE_URL="https://rugjqcvwlfkonziykita.supabase.co"
+          fi
+          SUPABASE_KEY="${{ secrets.SUPABASE_SERVICE_ROLE_KEY || secrets.SUPABASE_SERVICE_KEY || secrets.SUPABASE_ANON_KEY }}"
+          if [ -z "$SUPABASE_KEY" ]; then
+            SUPABASE_KEY="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJ1Z2pxY3Z3bGZrb256aXlraXRhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTE5ODQyNzUsImV4cCI6MjEwNzU2MDI3NX0.g6RFp4Ykir52EvdCpbZfZfyeoKGb5ohwLTD2YjkYNE8"
+          fi
+
           if [ -n "$SUPABASE_URL" ] && [ -n "$SUPABASE_KEY" ]; then
             echo "Updating recording status to 'recording' in Supabase..."
             curl -s -X PATCH "${SUPABASE_URL}/rest/v1/recordings?id=eq.${RECORDING_ID}" \
@@ -100,12 +106,18 @@ jobs:
           fi
 
           echo "Resolving active stream playlist URL..."
-          RESOLVED=$(node cloud-backend/resolve-stream.cjs "$STREAM_URL" "$PLATFORM")
-          TARGET_URL="${RESOLVED:-$STREAM_URL}"
-          echo "Target Stream URL to record: $TARGET_URL"
+          TARGET_URL="$STREAM_URL"
+          if [ "$PLATFORM" = "idn" ] || [[ "$STREAM_URL" =~ live-video\.net ]]; then
+            # Amazon IVS blocks datacenter IPs (Azure/GitHub Actions) with 403.
+            # Route immediately via Cloudflare Worker stream proxy.
+            ENCODED_URL=$(node -e "console.log(encodeURIComponent(process.argv[1]))" "$STREAM_URL")
+            TARGET_URL="https://jkt48-live-watcher.chandra02new.workers.dev/api/proxy/stream.m3u8?url=${ENCODED_URL}"
+            echo "IDN Stream routed via Cloudflare Proxy: $TARGET_URL"
+          else
+            echo "Showroom Stream direct HLS: $TARGET_URL"
+          fi
 
-          # Anti-corruption segmenter: MPEG-TS format is packetized and 100% playable even if cut mid-stream
-          echo "Attempting stream recording via direct HLS connection..."
+          echo "Starting FFmpeg segment recording..."
           ffmpeg -hide_banner -loglevel warning \
             -user_agent "$USER_AGENT" \
             -referer "$REFERER_URL" \
@@ -119,11 +131,11 @@ jobs:
             -reset_timestamps 1 \
             "raw_segments/rec_part_%03d.ts" &
           
-          trap "echo 'Graceful stop signal received. Stopping ffmpeg...'; kill -INT \$FFMPEG_PID 2>/dev/null || true; wait \$FFMPEG_PID 2>/dev/null || true; exit 0" SIGINT SIGTERM
           FFMPEG_PID=$!
+          trap "echo 'Graceful stop signal received. Stopping ffmpeg...'; kill -INT \$FFMPEG_PID 2>/dev/null || true; wait \$FFMPEG_PID 2>/dev/null || true; exit 0" SIGINT SIGTERM
           wait $FFMPEG_PID || true
 
-          # If direct connection yielded 0 valid segments (e.g. CDN datacenter IP block), fallback to Cloudflare Proxy
+          # If initial attempt produced 0 segments, try alternative
           shopt -s nullglob
           VALID_TS=()
           for f in raw_segments/*.ts; do
@@ -133,17 +145,20 @@ jobs:
           done
 
           if [ ${#VALID_TS[@]} -eq 0 ]; then
-            echo "Direct capture produced 0 segments. Falling back to Cloudflare Stream Proxy..."
-            ENCODED_URL=$(node -e "console.log(encodeURIComponent(process.argv[1]))" "$TARGET_URL")
-            PROXY_URL="https://jkt48-live-watcher.chandra02new.workers.dev/api/proxy/stream.m3u8?url=${ENCODED_URL}"
-            
+            echo "First attempt produced 0 segments. Trying fallback..."
+            if [[ "$TARGET_URL" =~ workers\.dev ]]; then
+              FALLBACK_URL="$STREAM_URL"
+            else
+              ENCODED_URL=$(node -e "console.log(encodeURIComponent(process.argv[1]))" "$STREAM_URL")
+              FALLBACK_URL="https://jkt48-live-watcher.chandra02new.workers.dev/api/proxy/stream.m3u8?url=${ENCODED_URL}"
+            fi
             ffmpeg -hide_banner -loglevel warning \
               -user_agent "$USER_AGENT" \
               -referer "$REFERER_URL" \
               -reconnect 1 \
               -reconnect_streamed 1 \
               -reconnect_delay_max 5 \
-              -i "$PROXY_URL" \
+              -i "$FALLBACK_URL" \
               -c copy \
               -f segment \
               -segment_time 3600 \
@@ -151,6 +166,7 @@ jobs:
               "raw_segments/rec_part_%03d.ts" &
             
             FFMPEG_PID=$!
+            trap "echo 'Graceful stop signal received in fallback. Stopping ffmpeg...'; kill -INT \$FFMPEG_PID 2>/dev/null || true; wait \$FFMPEG_PID 2>/dev/null || true; exit 0" SIGINT SIGTERM
             wait $FFMPEG_PID || true
           fi
 
@@ -216,14 +232,21 @@ jobs:
       - name: Upload Video to Telegram (Always Guaranteed Upload)
         id: upload_telegram
         if: always()
-        env:
-          BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN || '8984988206:AAEpkoy-TRN6HGg0Uk_MI67Pon7gJiucEuU' }}
-          CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID || '-1004418157265' }}
         run: |
           if [ "$HAS_VIDEO" != "true" ]; then
             echo "Skipping Telegram upload: No recorded video file exists."
             echo "TELEGRAM_LINK=" >> $GITHUB_ENV
             exit 0
+          fi
+
+          BOT_TOKEN="${{ secrets.TELEGRAM_BOT_TOKEN }}"
+          if [ -z "$BOT_TOKEN" ]; then
+            BOT_TOKEN="8984988206:AAEpkoy-TRN6HGg0Uk_MI67Pon7gJiucEuU"
+          fi
+
+          CHAT_ID="${{ secrets.TELEGRAM_CHAT_ID }}"
+          if [ -z "$CHAT_ID" ]; then
+            CHAT_ID="-1004418157265"
           fi
 
           if [ -z "$BOT_TOKEN" ] || [ -z "$CHAT_ID" ]; then
@@ -311,10 +334,17 @@ jobs:
 
       - name: Sync Final Status to Supabase
         if: always()
-        env:
-          SUPABASE_URL: ${{ secrets.SUPABASE_URL || 'https://rugjqcvwlfkonziykita.supabase.co' }}
-          SUPABASE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY || secrets.SUPABASE_SERVICE_KEY || secrets.SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJ1Z2pxY3Z3bGZrb256aXlraXRhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTE5ODQyNzUsImV4cCI6MjEwNzU2MDI3NX0.g6RFp4Ykir52EvdCpbZfZfyeoKGb5ohwLTD2YjkYNE8' }}
         run: |
+          SUPABASE_URL="${{ secrets.SUPABASE_URL }}"
+          if [ -z "$SUPABASE_URL" ]; then
+            SUPABASE_URL="https://rugjqcvwlfkonziykita.supabase.co"
+          fi
+
+          SUPABASE_KEY="${{ secrets.SUPABASE_SERVICE_ROLE_KEY || secrets.SUPABASE_SERVICE_KEY || secrets.SUPABASE_ANON_KEY }}"
+          if [ -z "$SUPABASE_KEY" ]; then
+            SUPABASE_KEY="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJ1Z2pxY3Z3bGZrb256aXlraXRhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTE5ODQyNzUsImV4cCI6MjEwNzU2MDI3NX0.g6RFp4Ykir52EvdCpbZfZfyeoKGb5ohwLTD2YjkYNE8"
+          fi
+
           if [ -z "$SUPABASE_URL" ] || [ -z "$SUPABASE_KEY" ]; then
             echo "Supabase not configured."
             exit 0
