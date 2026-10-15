@@ -24,24 +24,39 @@ async function recordHls({
     fs.mkdirSync(outDir, { recursive: true });
   }
 
-  // 1. Resolve master playlist via Cloudflare Worker Proxy
+  // 1. Resolve master playlist via Cloudflare Worker Proxy with fallback to direct
   let proxyMasterUrl = streamUrl;
   if (streamUrl.includes('live-video.net') || !streamUrl.includes('workers.dev')) {
     const encoded = encodeURIComponent(streamUrl);
     proxyMasterUrl = `https://jkt48-live-watcher.chandra02new.workers.dev/api/proxy/stream.m3u8?url=${encoded}`;
   }
 
-  console.log(`[RecorderEngine] Fetching master playlist: ${proxyMasterUrl}`);
-  const masterRes = await fetch(proxyMasterUrl, {
-    headers: {
-      'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
-      'Origin': 'https://www.idn.app',
-      'Referer': 'https://www.idn.app/'
-    }
-  });
+  const reqHeaders = {
+    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
+    'Origin': 'https://www.idn.app',
+    'Referer': 'https://www.idn.app/'
+  };
 
-  if (!masterRes.ok) {
-    throw new Error(`Failed to fetch master playlist: HTTP ${masterRes.status}`);
+  let masterRes = null;
+  const urlsToTry = [proxyMasterUrl, streamUrl];
+
+  for (const urlToFetch of urlsToTry) {
+    for (let attempt = 1; attempt <= 4; attempt++) {
+      try {
+        console.log(`[RecorderEngine] Fetching master playlist (Attempt ${attempt}): ${urlToFetch}`);
+        masterRes = await fetch(urlToFetch, { headers: reqHeaders });
+        if (masterRes.ok) break;
+        console.warn(`[RecorderEngine] Fetch returned HTTP ${masterRes.status}, retrying in 1.5s...`);
+      } catch (fetchErr) {
+        console.warn(`[RecorderEngine] Network warning: ${fetchErr.message}, retrying in 1.5s...`);
+      }
+      await new Promise(r => setTimeout(r, 1500));
+    }
+    if (masterRes && masterRes.ok) break;
+  }
+
+  if (!masterRes || !masterRes.ok) {
+    throw new Error(`Failed to fetch master playlist after retries: HTTP ${masterRes ? masterRes.status : 'ERR'}`);
   }
 
   const masterText = await masterRes.text();
@@ -123,13 +138,11 @@ async function recordHls({
             downloadedSegments.add(segUrl);
 
             try {
-              const segRes = await fetch(segUrl, {
-                headers: {
-                  'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
-                  'Origin': 'https://www.idn.app',
-                  'Referer': 'https://www.idn.app/'
-                }
-              });
+              let segRes = await fetch(segUrl, { headers: reqHeaders });
+              if (!segRes.ok) {
+                await new Promise(r => setTimeout(r, 500));
+                segRes = await fetch(segUrl, { headers: reqHeaders });
+              }
 
               if (segRes.ok) {
                 const buf = Buffer.from(await segRes.arrayBuffer());

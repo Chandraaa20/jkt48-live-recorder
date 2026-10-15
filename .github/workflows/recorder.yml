@@ -117,7 +117,15 @@ jobs:
           done
 
           if [ ${#VALID_TS[@]} -eq 0 ]; then
-            echo "Node engine produced 0 segments. Trying FFmpeg direct fallback..."
+            echo "Node engine produced 0 segments. Trying FFmpeg with Cloudflare proxy..."
+            ENCODED_URL=$(node -e "console.log(encodeURIComponent(process.argv[1]))" "$STREAM_URL")
+            PROXIED="https://jkt48-live-watcher.chandra02new.workers.dev/api/proxy/stream.m3u8?url=${ENCODED_URL}"
+            ffmpeg -hide_banner -loglevel warning \
+              -user_agent "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36" \
+              -i "$PROXIED" \
+              -c copy \
+              -t "${DURATION:-45}" \
+              "raw_segments/rec_part_000.ts" || \
             ffmpeg -hide_banner -loglevel warning \
               -user_agent "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36" \
               -i "$STREAM_URL" \
