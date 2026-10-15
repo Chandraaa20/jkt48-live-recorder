@@ -93,8 +93,15 @@ jobs:
           # Trap termination signals so running ffmpeg cleanly flushes
           trap 'echo "Signal received, stopping ffmpeg cleanly..."; kill -INT "$FFMPEG_PID" 2>/dev/null' SIGTERM SIGINT
 
+          HTTP_HEADERS="Referer: https://www.idn.app/\r\nUser-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36\r\n"
+          if [ "$PLATFORM" = "showroom" ]; then
+            HTTP_HEADERS="Referer: https://www.showroom-live.com/\r\nUser-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36\r\n"
+          fi
+
           # Anti-corruption segmenter: MPEG-TS format is packetized and 100% playable even if cut mid-stream
+          echo "Attempting stream recording via direct HLS connection..."
           ffmpeg -hide_banner -loglevel warning \
+            -headers "$HTTP_HEADERS" \
             -reconnect 1 \
             -reconnect_streamed 1 \
             -reconnect_delay_max 5 \
@@ -107,6 +114,36 @@ jobs:
           
           FFMPEG_PID=$!
           wait $FFMPEG_PID || true
+
+          # If direct connection yielded 0 valid segments (e.g. CDN datacenter IP block), fallback to Cloudflare Proxy
+          shopt -s nullglob
+          VALID_TS=()
+          for f in raw_segments/*.ts; do
+            if [ -f "$f" ] && [ -s "$f" ]; then
+              VALID_TS+=("$f")
+            fi
+          done
+
+          if [ ${#VALID_TS[@]} -eq 0 ]; then
+            echo "Direct capture produced 0 segments. Falling back to Cloudflare Stream Proxy..."
+            ENCODED_URL=$(node -e "console.log(encodeURIComponent(process.argv[1]))" "$STREAM_URL")
+            PROXY_URL="https://jkt48-live-watcher.chandra02new.workers.dev/api/proxy?url=${ENCODED_URL}"
+            
+            ffmpeg -hide_banner -loglevel warning \
+              -reconnect 1 \
+              -reconnect_streamed 1 \
+              -reconnect_delay_max 5 \
+              -i "$PROXY_URL" \
+              -c copy \
+              -f segment \
+              -segment_time 3600 \
+              -reset_timestamps 1 \
+              "raw_segments/rec_part_%03d.ts" &
+            
+            FFMPEG_PID=$!
+            wait $FFMPEG_PID || true
+          fi
+
           echo "FFmpeg recording step completed or stopped."
 
       - name: Remux and Consolidate Video Segments
