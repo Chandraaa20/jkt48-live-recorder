@@ -8,6 +8,24 @@ export default {
   theme: {
     extend: {
       colors: {
+        earth: {
+          bg: '#FAF8F2',
+          card: '#FFFFFF',
+          border: '#E8E1D5',
+          borderLight: '#F1EBE1',
+          primary: '#3D5E52',
+          primaryHover: '#314D43',
+          primaryLight: '#EAF1EE',
+          primaryBorder: '#BED5CC',
+          dark: '#2B2522',
+          darkMuted: '#6D655F',
+          sand: '#E6D8C6',
+          sandLight: '#F7EFE4',
+          sandDark: '#6E5844',
+          teal: '#2F4855',
+          tealLight: '#ECF2F6',
+          live: '#C94A3D',
+        },
         dark: {
           bg: '#0a0d14',
           card: '#111622',

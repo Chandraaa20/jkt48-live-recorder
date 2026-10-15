@@ -10,7 +10,6 @@ import {
   Disc3,
   ExternalLink,
   AlertCircle,
-  Radio,
   CheckCircle2,
 } from './Icons';
 
@@ -171,39 +170,39 @@ export default function LivePlayerModal({
 
   return (
     <div 
-      className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-slate-900/60 backdrop-blur-sm transition-all duration-200 p-0 sm:p-4"
+      className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-[#2B2522]/60 backdrop-blur-sm transition-all duration-200 p-0 sm:p-4"
       onClick={onClose}
     >
       {/* Modal Dialog Content */}
       <div 
-        className="w-full sm:max-w-lg bg-white border border-slate-200/90 sm:rounded-2xl rounded-t-2xl shadow-2xl overflow-hidden flex flex-col max-h-[92vh] animate-in fade-in slide-in-from-bottom-6 duration-200"
+        className="w-full sm:max-w-lg bg-white border border-[#E8E1D5] sm:rounded-2xl rounded-t-2xl shadow-2xl overflow-hidden flex flex-col max-h-[92vh] animate-in fade-in slide-in-from-bottom-6 duration-200"
         role="dialog"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Top bar inside modal */}
-        <div className="px-4 py-3 bg-slate-50 border-b border-slate-200/80 flex items-center justify-between">
-          <div className="flex items-center space-x-2.5 overflow-hidden">
+        <div className="px-5 py-3.5 bg-[#FAF8F2] border-b border-[#E8E1D5] flex items-center justify-between">
+          <div className="flex items-center space-x-3 overflow-hidden">
             <img
               src={member.avatar_url || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&h=100&fit=crop'}
               alt={member.name || 'Member'}
-              className="w-9 h-9 rounded-full object-cover border border-slate-200 shrink-0"
+              className="w-9 h-9 rounded-full object-cover border border-[#E8E1D5] shrink-0"
             />
             <div className="truncate">
               <div className="flex items-center space-x-1.5 flex-wrap">
-                <span className="font-bold text-sm text-slate-900 truncate">
+                <span className="font-bold text-sm text-[#2B2522] truncate">
                   {member.name || 'JKT48 Member'}
                 </span>
                 <span
                   className={`text-[10px] font-bold px-2 py-0.5 rounded-md uppercase border ${
                     isShowroom
-                      ? 'bg-sky-50 text-sky-700 border-sky-200'
-                      : 'bg-rose-50 text-rose-700 border-rose-200'
+                      ? 'bg-[#ECF2F6] text-[#2F4855] border-[#CADAE2]'
+                      : 'bg-[#FAF0E6] text-[#8C4A36] border-[#ECD9C8]'
                   }`}
                 >
                   {live.platform?.toUpperCase() || 'LIVE'}
                 </span>
               </div>
-              <p className="text-xs text-slate-500 font-medium truncate mt-0.5">
+              <p className="text-xs text-[#6D655F] font-medium truncate mt-0.5">
                 {live.title || 'Sedang Live Streaming'}
               </p>
             </div>
@@ -211,7 +210,7 @@ export default function LivePlayerModal({
 
           <button
             onClick={onClose}
-            className="min-h-[44px] min-w-[44px] flex items-center justify-center rounded-xl text-slate-400 hover:text-slate-800 hover:bg-slate-200/60 transition-colors"
+            className="min-h-[44px] min-w-[44px] flex items-center justify-center rounded-xl text-[#8A8179] hover:text-[#2B2522] hover:bg-[#F4EFE7] transition-colors"
             aria-label="Tutup Player"
           >
             <X className="w-5 h-5" />
@@ -230,15 +229,15 @@ export default function LivePlayerModal({
           {/* Buffering Loading Indicator */}
           {isLoading && !errorMsg && (
             <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/60 backdrop-blur-xs space-y-2">
-              <div className="w-8 h-8 border-2 border-rose-500 border-t-transparent rounded-full animate-spin" />
+              <div className="w-8 h-8 border-2 border-[#3D5E52] border-t-transparent rounded-full animate-spin" />
               <span className="text-xs font-semibold text-white">Menghubungkan stream HLS...</span>
             </div>
           )}
 
           {/* Error fallback overlay */}
           {errorMsg && (
-            <div className="absolute inset-0 p-4 flex flex-col items-center justify-center bg-slate-900/95 text-center space-y-2">
-              <AlertCircle className="w-8 h-8 text-rose-500" />
+            <div className="absolute inset-0 p-4 flex flex-col items-center justify-center bg-[#2B2522]/95 text-center space-y-2">
+              <AlertCircle className="w-8 h-8 text-[#C94A3D]" />
               <p className="text-xs text-white max-w-xs">{errorMsg}</p>
               <button
                 onClick={() => {
@@ -248,7 +247,7 @@ export default function LivePlayerModal({
                     hlsRef.current.loadSource(live.stream_url);
                   }
                 }}
-                className="mt-2 px-3.5 py-1.5 rounded-xl bg-rose-600 hover:bg-rose-700 text-xs font-bold text-white transition-colors"
+                className="mt-2 px-4 py-2 rounded-xl bg-[#3D5E52] hover:bg-[#314D43] text-xs font-bold text-white transition-colors"
               >
                 Coba Muat Ulang
               </button>
@@ -271,12 +270,12 @@ export default function LivePlayerModal({
                 className="p-1.5 rounded-full hover:bg-white/20 transition-colors"
                 aria-label={isMuted ? 'Unmute' : 'Mute'}
               >
-                {isMuted ? <VolumeX className="w-4 h-4 text-rose-400" /> : <Volume2 className="w-4 h-4" />}
+                {isMuted ? <VolumeX className="w-4 h-4 text-[#FAF0E6]" /> : <Volume2 className="w-4 h-4" />}
               </button>
 
               <div className="flex items-center space-x-1 px-2 py-0.5 rounded bg-black/50 text-[11px] font-medium">
-                <span className="w-1.5 h-1.5 rounded-full bg-rose-500 animate-pulse" />
-                <span className="text-rose-400 font-semibold uppercase">LIVE</span>
+                <span className="w-1.5 h-1.5 rounded-full bg-[#C94A3D] animate-pulse" />
+                <span className="text-white font-semibold uppercase">LIVE</span>
               </div>
             </div>
 
@@ -291,22 +290,22 @@ export default function LivePlayerModal({
         </div>
 
         {/* Modal Footer & Actions */}
-        <div className="p-4 bg-white space-y-3">
+        <div className="p-5 bg-white space-y-4">
           {/* Status recording banner */}
-          <div className="flex items-center justify-between p-3 rounded-2xl bg-slate-50 border border-slate-200/90 gap-2">
-            <div className="flex items-center space-x-2.5 min-w-0">
+          <div className="flex items-center justify-between p-3.5 rounded-2xl bg-[#FAF8F2] border border-[#E8E1D5] gap-2">
+            <div className="flex items-center space-x-3 min-w-0">
               <div
                 className={`w-3 h-3 rounded-full shrink-0 ${
-                  live.is_recording ? 'bg-rose-500 rec-pulse' : 'bg-slate-300'
+                  live.is_recording ? 'bg-[#C94A3D] rec-pulse' : 'bg-[#B6ACA3]'
                 }`}
               />
               <div className="min-w-0">
-                <div className="text-xs font-bold text-slate-900 truncate">
+                <div className="text-xs font-bold text-[#2B2522] truncate">
                   {live.is_recording
                     ? 'Status: Cloud Recording Aktif'
                     : 'Status: Belum Direkam'}
                 </div>
-                <div className="text-[11px] text-slate-500 truncate">
+                <div className="text-[11px] text-[#6D655F] truncate">
                   {live.is_recording
                     ? 'Sesi live ini sedang direkam secara cloud'
                     : 'Picu manual atau aktifkan auto-record'}
@@ -319,7 +318,7 @@ export default function LivePlayerModal({
               <button
                 onClick={handleManualRecord}
                 disabled={isRecordingLoading}
-                className="min-h-[44px] flex items-center space-x-1.5 px-3.5 py-2 rounded-xl bg-rose-600 hover:bg-rose-700 active:scale-95 text-xs font-bold text-white transition-all shadow-md shadow-rose-600/20 disabled:opacity-50 shrink-0"
+                className="min-h-[44px] flex items-center space-x-1.5 px-4 py-2 rounded-xl bg-[#3D5E52] hover:bg-[#314D43] active:scale-95 text-xs font-bold text-white transition-all shadow-md shadow-[#3D5E52]/20 disabled:opacity-50 shrink-0"
               >
                 <Disc3 className={`w-3.5 h-3.5 ${isRecordingLoading ? 'animate-spin' : ''}`} />
                 <span>{isRecordingLoading ? 'Memicu...' : 'Picu Rekam'}</span>
@@ -327,22 +326,22 @@ export default function LivePlayerModal({
             )}
 
             {live.is_recording && (
-              <span className="flex items-center space-x-1 px-3 py-1.5 rounded-xl bg-rose-50 border border-rose-200 text-xs font-bold text-rose-700 shrink-0">
-                <CheckCircle2 className="w-3.5 h-3.5 text-rose-600" />
+              <span className="flex items-center space-x-1 px-3 py-1.5 rounded-xl bg-[#FAF0E6] border border-[#ECD9C8] text-xs font-bold text-[#8C4A36] shrink-0">
+                <CheckCircle2 className="w-3.5 h-3.5 text-[#8C4A36]" />
                 <span>Direkam</span>
               </span>
             )}
           </div>
 
           {recordingSuccess && (
-            <div className="p-2.5 bg-emerald-50 border border-emerald-200 rounded-xl text-emerald-800 text-xs flex items-center space-x-2">
-              <CheckCircle2 className="w-4 h-4 shrink-0 text-emerald-600" />
+            <div className="p-3 bg-[#EAF1EE] border border-[#BED5CC] rounded-xl text-[#2D4A3F] text-xs flex items-center space-x-2">
+              <CheckCircle2 className="w-4 h-4 shrink-0 text-[#3D5E52]" />
               <span className="font-semibold">Perintah rekam cloud manual berhasil dikirim!</span>
             </div>
           )}
 
           {/* Quick links & info */}
-          <div className="flex items-center justify-between text-xs text-slate-500 pt-1">
+          <div className="flex items-center justify-between text-xs text-[#6D655F] pt-1">
             <span className="truncate max-w-[200px]">
               URL: {live.stream_url ? live.stream_url.substring(0, 32) + '...' : '-'}
             </span>
@@ -350,7 +349,7 @@ export default function LivePlayerModal({
               href={live.stream_url}
               target="_blank"
               rel="noreferrer"
-              className="inline-flex items-center space-x-1 text-rose-600 hover:text-rose-700 font-bold"
+              className="inline-flex items-center space-x-1 text-[#3D5E52] hover:underline font-bold"
             >
               <span>Tautan .m3u8</span>
               <ExternalLink className="w-3.5 h-3.5" />

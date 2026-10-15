@@ -15,8 +15,8 @@
 body {
   margin: 0;
   padding: 0;
-  background-color: #f8fafc;
-  color: #0f172a;
+  background-color: #FAF8F2;
+  color: #2B2522;
   font-family: 'Inter', system-ui, -apple-system, sans-serif;
   overflow-x: hidden;
   -webkit-font-smoothing: antialiased;
@@ -25,18 +25,18 @@ body {
 
 /* Custom scrollbars */
 ::-webkit-scrollbar {
-  width: 4px;
-  height: 4px;
+  width: 5px;
+  height: 5px;
 }
 ::-webkit-scrollbar-track {
-  background: #f8fafc;
+  background: #FAF8F2;
 }
 ::-webkit-scrollbar-thumb {
-  background: #cbd5e1;
+  background: #D8CEBF;
   border-radius: 9999px;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: #94a3b8;
+  background: #BDB09E;
 }
 
 /* Safe area support for mobile devices with notches */

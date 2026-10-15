@@ -214,47 +214,47 @@ export default function SettingsView({
   };
 
   return (
-    <div className="px-4 sm:px-5 pt-4 pb-28 max-w-lg mx-auto space-y-4">
+    <div className="px-4 sm:px-6 pt-5 pb-32 max-w-lg mx-auto space-y-5">
       {/* Title */}
       <div>
-        <h2 className="text-xl font-bold text-slate-900 tracking-tight">
+        <h2 className="text-xl font-bold text-[#2B2522] tracking-tight">
           Pengaturan Sistem
         </h2>
-        <p className="text-xs text-slate-500 mt-0.5">
+        <p className="text-xs text-[#6D655F] mt-0.5">
           Konfigurasi koneksi Supabase, worker perekam & bot Telegram
         </p>
       </div>
 
       {/* Supabase Configuration Card */}
-      <div className="p-4 sm:p-5 rounded-2xl bg-white border border-slate-200/80 space-y-4 shadow-[0_2px_10px_-3px_rgba(15,23,42,0.06)]">
+      <div className="p-5 rounded-2xl bg-white border border-[#E8E1D5] space-y-4 shadow-[0_2px_12px_-3px_rgba(43,37,34,0.06)]">
         <div className="flex items-center justify-between">
           <div className="flex items-center space-x-2.5">
-            <div className="p-2 rounded-xl bg-emerald-50 text-emerald-700 border border-emerald-200">
+            <div className="p-2.5 rounded-xl bg-[#EAF1EE] text-[#3D5E52] border border-[#BED5CC]">
               <Database className="w-4 h-4" />
             </div>
             <div>
-              <h3 className="text-sm font-bold text-slate-900">Database Supabase</h3>
-              <p className="text-[11px] text-slate-500">
+              <h3 className="text-sm font-bold text-[#2B2522]">Database Supabase</h3>
+              <p className="text-[11px] text-[#6D655F]">
                 Penyimpanan utama real-time & sinkronisasi member
               </p>
             </div>
           </div>
 
           <span
-            className={`px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider flex items-center space-x-1 border ${
+            className={`px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider flex items-center space-x-1 border ${
               testResult?.connected || (supabaseUrl && supabaseKey)
-                ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
-                : 'bg-amber-50 text-amber-700 border-amber-200'
+                ? 'bg-[#EAF1EE] text-[#2D4A3F] border-[#BED5CC]'
+                : 'bg-[#FAF0E6] text-[#8C4A36] border-[#ECD9C8]'
             }`}
           >
             {testResult?.connected || (supabaseUrl && supabaseKey) ? (
               <>
-                <Wifi className="w-3 h-3" />
+                <Wifi className="w-3 h-3 text-[#3D5E52]" />
                 <span>Terhubung</span>
               </>
             ) : (
               <>
-                <WifiOff className="w-3 h-3" />
+                <WifiOff className="w-3 h-3 text-[#8C4A36]" />
                 <span>Mode Offline</span>
               </>
             )}
@@ -264,7 +264,7 @@ export default function SettingsView({
         {/* Form Inputs */}
         <div className="space-y-3 pt-1">
           <div>
-            <label className="block text-xs font-semibold text-slate-700 mb-1">
+            <label className="block text-xs font-semibold text-[#2B2522] mb-1">
               Project URL Supabase
             </label>
             <input
@@ -272,12 +272,12 @@ export default function SettingsView({
               value={supabaseUrl}
               onChange={(e) => setSupabaseUrl(e.target.value)}
               placeholder="https://your-project.supabase.co"
-              className="w-full min-h-[42px] px-3.5 py-2 rounded-xl bg-slate-50 border border-slate-200/90 text-xs text-slate-900 placeholder-slate-400 focus:outline-none focus:border-rose-500 focus:bg-white transition-all"
+              className="w-full min-h-[42px] px-3.5 py-2 rounded-xl bg-[#FAF8F2] border border-[#E8E1D5] text-xs text-[#2B2522] placeholder-[#8A8179] focus:outline-none focus:border-[#3D5E52] focus:bg-white transition-all"
             />
           </div>
 
           <div>
-            <label className="block text-xs font-semibold text-slate-700 mb-1">
+            <label className="block text-xs font-semibold text-[#2B2522] mb-1">
               Anon Public API Key
             </label>
             <input
@@ -285,16 +285,16 @@ export default function SettingsView({
               value={supabaseKey}
               onChange={(e) => setSupabaseKey(e.target.value)}
               placeholder="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
-              className="w-full min-h-[42px] px-3.5 py-2 rounded-xl bg-slate-50 border border-slate-200/90 text-xs text-slate-900 placeholder-slate-400 focus:outline-none focus:border-rose-500 focus:bg-white transition-all"
+              className="w-full min-h-[42px] px-3.5 py-2 rounded-xl bg-[#FAF8F2] border border-[#E8E1D5] text-xs text-[#2B2522] placeholder-[#8A8179] focus:outline-none focus:border-[#3D5E52] focus:bg-white transition-all"
             />
           </div>
         </div>
 
         {/* Action Buttons */}
-        <div className="flex items-center gap-2 pt-1">
+        <div className="flex items-center gap-2.5 pt-1">
           <button
             onClick={handleSaveConfig}
-            className="flex-1 min-h-[44px] flex items-center justify-center space-x-1.5 py-2 rounded-xl bg-rose-600 hover:bg-rose-700 active:scale-95 text-xs font-bold text-white transition-all shadow-md shadow-rose-600/20"
+            className="flex-1 min-h-[44px] flex items-center justify-center space-x-1.5 py-2 rounded-xl bg-[#3D5E52] hover:bg-[#314D43] active:scale-95 text-xs font-bold text-white transition-all shadow-md shadow-[#3D5E52]/20"
           >
             <Save className="w-3.5 h-3.5" />
             <span>Simpan Pengaturan</span>
@@ -303,17 +303,17 @@ export default function SettingsView({
           <button
             onClick={handleTestConnection}
             disabled={isTesting}
-            className="flex-1 min-h-[44px] flex items-center justify-center space-x-1.5 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 active:scale-95 text-xs font-bold text-slate-800 transition-all border border-slate-200/90 disabled:opacity-50"
+            className="flex-1 min-h-[44px] flex items-center justify-center space-x-1.5 py-2 rounded-xl bg-[#FAF8F2] hover:bg-[#F4EFE7] active:scale-95 text-xs font-bold text-[#2B2522] transition-all border border-[#E8E1D5] disabled:opacity-50"
           >
-            <Wifi className={`w-3.5 h-3.5 ${isTesting ? 'animate-pulse text-rose-600' : 'text-slate-600'}`} />
+            <Wifi className={`w-3.5 h-3.5 ${isTesting ? 'animate-pulse text-[#3D5E52]' : 'text-[#6D655F]'}`} />
             <span>{isTesting ? 'Menguji...' : 'Uji Koneksi'}</span>
           </button>
         </div>
 
         {/* Feedback Messages */}
         {saveSuccess && (
-          <div className="p-3 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs flex items-center space-x-2">
-            <Check className="w-4 h-4 shrink-0 text-emerald-600" />
+          <div className="p-3 rounded-xl bg-[#EAF1EE] border border-[#BED5CC] text-[#2D4A3F] text-xs flex items-center space-x-2">
+            <Check className="w-4 h-4 shrink-0 text-[#3D5E52]" />
             <span className="font-semibold">Konfigurasi Supabase berhasil disimpan!</span>
           </div>
         )}
@@ -322,14 +322,14 @@ export default function SettingsView({
           <div
             className={`p-3 rounded-xl border text-xs flex items-center space-x-2 ${
               testResult.connected
-                ? 'bg-emerald-50 border-emerald-200 text-emerald-800'
-                : 'bg-rose-50 border-rose-200 text-rose-800'
+                ? 'bg-[#EAF1EE] border-[#BED5CC] text-[#2D4A3F]'
+                : 'bg-[#FAF0E6] border-[#ECD9C8] text-[#8C4A36]'
             }`}
           >
             {testResult.connected ? (
-              <Check className="w-4 h-4 shrink-0 text-emerald-600" />
+              <Check className="w-4 h-4 shrink-0 text-[#3D5E52]" />
             ) : (
-              <AlertCircle className="w-4 h-4 shrink-0 text-rose-600" />
+              <AlertCircle className="w-4 h-4 shrink-0 text-[#8C4A36]" />
             )}
             <span className="font-semibold">{testResult.message}</span>
           </div>
@@ -337,15 +337,15 @@ export default function SettingsView({
       </div>
 
       {/* Worker & Automation Configuration Card */}
-      <div className="p-4 sm:p-5 rounded-2xl bg-white border border-slate-200/80 space-y-4 shadow-[0_2px_10px_-3px_rgba(15,23,42,0.06)]">
+      <div className="p-5 rounded-2xl bg-white border border-[#E8E1D5] space-y-4 shadow-[0_2px_12px_-3px_rgba(43,37,34,0.06)]">
         <div className="flex items-center justify-between">
           <div className="flex items-center space-x-2.5">
-            <div className="p-2 rounded-xl bg-sky-50 text-sky-700 border border-sky-200">
+            <div className="p-2.5 rounded-xl bg-[#ECF2F6] text-[#2F4855] border border-[#CADAE2]">
               <Server className="w-4 h-4" />
             </div>
             <div>
-              <h3 className="text-sm font-bold text-slate-900">Otomasi Worker & Cloud Recorder</h3>
-              <p className="text-[11px] text-slate-500">
+              <h3 className="text-sm font-bold text-[#2B2522]">Otomasi Worker & Cloud Recorder</h3>
+              <p className="text-[11px] text-[#6D655F]">
                 Sambungkan Cloudflare Worker dan GitHub Actions Recorder
               </p>
             </div>
@@ -353,13 +353,13 @@ export default function SettingsView({
         </div>
 
         {/* 1. Cloudflare Worker Section */}
-        <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-200/80 space-y-2.5">
+        <div className="p-4 rounded-xl bg-[#FAF8F2] border border-[#E8E1D5] space-y-2.5">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-bold text-slate-900 flex items-center space-x-1.5">
-              <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+            <span className="text-xs font-bold text-[#2B2522] flex items-center space-x-1.5">
+              <span className="w-2 h-2 rounded-full bg-[#3D5E52] animate-pulse" />
               <span>1. Cloudflare Worker URL (Proxy Aman & Pemantau)</span>
             </span>
-            <span className="text-[10px] font-semibold text-slate-500">Cron 1 Menit</span>
+            <span className="text-[10px] font-semibold text-[#6D655F]">Cron 1 Menit</span>
           </div>
 
           <input
@@ -367,17 +367,17 @@ export default function SettingsView({
             value={workerUrl}
             onChange={(e) => setWorkerUrl(e.target.value)}
             placeholder="https://jkt48-live-watcher.yourname.workers.dev"
-            className="w-full min-h-[42px] px-3.5 py-2 rounded-xl bg-white border border-slate-200/90 text-xs text-slate-900 placeholder-slate-400 focus:outline-none focus:border-rose-500 transition-all"
+            className="w-full min-h-[42px] px-3.5 py-2 rounded-xl bg-white border border-[#E8E1D5] text-xs text-[#2B2522] placeholder-[#8A8179] focus:outline-none focus:border-[#3D5E52] transition-all"
           />
 
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pt-1">
-            <p className="text-[10px] text-slate-500 max-w-[260px]">
+            <p className="text-[10px] text-[#6D655F] max-w-[260px]">
               Proxy aman untuk memicu perekaman cloud tanpa membocorkan token GitHub ke klien.
             </p>
             <button
               onClick={handleTriggerWorker}
               disabled={isTriggeringWorker || !workerUrl}
-              className="min-h-[38px] px-3.5 py-1.5 rounded-xl bg-white hover:bg-slate-100 active:scale-95 text-xs font-bold text-slate-800 border border-slate-200/90 transition-all disabled:opacity-40 shadow-xs self-start sm:self-auto"
+              className="min-h-[38px] px-3.5 py-1.5 rounded-xl bg-white hover:bg-[#F4EFE7] active:scale-95 text-xs font-bold text-[#2B2522] border border-[#E8E1D5] transition-all disabled:opacity-40 shadow-xs self-start sm:self-auto"
             >
               {isTriggeringWorker ? 'Memeriksa...' : 'Picu Cek Sekarang'}
             </button>
@@ -387,29 +387,29 @@ export default function SettingsView({
             <div
               className={`p-2.5 rounded-xl text-xs flex items-center space-x-2 border ${
                 workerFeedback.success
-                  ? 'bg-emerald-50 border-emerald-200 text-emerald-800'
-                  : 'bg-rose-50 border-rose-200 text-rose-800'
+                  ? 'bg-[#EAF1EE] border-[#BED5CC] text-[#2D4A3F]'
+                  : 'bg-[#FAF0E6] border-[#ECD9C8] text-[#8C4A36]'
               }`}
             >
-              {workerFeedback.success ? <Check className="w-4 h-4 text-emerald-600" /> : <AlertCircle className="w-4 h-4 text-rose-600" />}
+              {workerFeedback.success ? <Check className="w-4 h-4 text-[#3D5E52]" /> : <AlertCircle className="w-4 h-4 text-[#8C4A36]" />}
               <span className="font-semibold">{workerFeedback.message}</span>
             </div>
           )}
         </div>
 
         {/* 2. GitHub Actions Cloud Recorder Section */}
-        <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-200/80 space-y-2.5">
+        <div className="p-4 rounded-xl bg-[#FAF8F2] border border-[#E8E1D5] space-y-2.5">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-bold text-slate-900 flex items-center space-x-1.5">
-              <span className="w-2 h-2 rounded-full bg-rose-500" />
+            <span className="text-xs font-bold text-[#2B2522] flex items-center space-x-1.5">
+              <span className="w-2 h-2 rounded-full bg-[#3D5E52]" />
               <span>2. GitHub Actions Cloud Recorder (Runner FFmpeg)</span>
             </span>
-            <span className="text-[10px] font-semibold text-slate-500">Gratis 2000m/bln</span>
+            <span className="text-[10px] font-semibold text-[#6D655F]">Gratis 2000m/bln</span>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
             <div>
-              <label className="block text-[11px] font-semibold text-slate-700 mb-1">
+              <label className="block text-[11px] font-semibold text-[#2B2522] mb-1">
                 GitHub Repository (owner/repo)
               </label>
               <input
@@ -417,12 +417,12 @@ export default function SettingsView({
                 value={githubRepo}
                 onChange={(e) => setGithubRepo(e.target.value)}
                 placeholder="contoh: username/jkt48-live-recorder"
-                className="w-full min-h-[42px] px-3.5 py-2 rounded-xl bg-white border border-slate-200/90 text-xs text-slate-900 placeholder-slate-400 focus:outline-none focus:border-rose-500 transition-all"
+                className="w-full min-h-[42px] px-3.5 py-2 rounded-xl bg-white border border-[#E8E1D5] text-xs text-[#2B2522] placeholder-[#8A8179] focus:outline-none focus:border-[#3D5E52] transition-all"
               />
             </div>
 
             <div>
-              <label className="block text-[11px] font-semibold text-slate-700 mb-1">
+              <label className="block text-[11px] font-semibold text-[#2B2522] mb-1">
                 Personal Access Token (Fallback Lokal)
               </label>
               <input
@@ -430,19 +430,19 @@ export default function SettingsView({
                 value={githubToken}
                 onChange={(e) => setGithubToken(e.target.value)}
                 placeholder="ghp_xxxxxxxxxxxx"
-                className="w-full min-h-[42px] px-3.5 py-2 rounded-xl bg-white border border-slate-200/90 text-xs text-slate-900 placeholder-slate-400 focus:outline-none focus:border-rose-500 transition-all"
+                className="w-full min-h-[42px] px-3.5 py-2 rounded-xl bg-white border border-[#E8E1D5] text-xs text-[#2B2522] placeholder-[#8A8179] focus:outline-none focus:border-[#3D5E52] transition-all"
               />
             </div>
           </div>
 
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pt-1">
-            <p className="text-[10px] text-slate-500 max-w-[260px]">
+            <p className="text-[10px] text-[#6D655F] max-w-[260px]">
               Merekam format Transport Stream (.ts) tahan putus & upload arsip ke Telegram Channel.
             </p>
             <button
               onClick={handleTestGithub}
               disabled={isTestingGithub || (!workerUrl && !githubToken)}
-              className="min-h-[38px] px-3.5 py-1.5 rounded-xl bg-white hover:bg-slate-100 active:scale-95 text-xs font-bold text-rose-600 border border-slate-200/90 transition-all disabled:opacity-40 shadow-xs self-start sm:self-auto"
+              className="min-h-[38px] px-3.5 py-1.5 rounded-xl bg-white hover:bg-[#F4EFE7] active:scale-95 text-xs font-bold text-[#3D5E52] border border-[#E8E1D5] transition-all disabled:opacity-40 shadow-xs self-start sm:self-auto"
             >
               {isTestingGithub ? 'Memicu...' : 'Uji Trigger Rekaman'}
             </button>
@@ -452,11 +452,11 @@ export default function SettingsView({
             <div
               className={`p-2.5 rounded-xl text-xs flex items-center space-x-2 border ${
                 githubFeedback.triggered
-                  ? 'bg-emerald-50 border-emerald-200 text-emerald-800'
-                  : 'bg-rose-50 border-rose-200 text-rose-800'
+                  ? 'bg-[#EAF1EE] border-[#BED5CC] text-[#2D4A3F]'
+                  : 'bg-[#FAF0E6] border-[#ECD9C8] text-[#8C4A36]'
               }`}
             >
-              {githubFeedback.triggered ? <Check className="w-4 h-4 text-emerald-600" /> : <AlertCircle className="w-4 h-4 text-rose-600" />}
+              {githubFeedback.triggered ? <Check className="w-4 h-4 text-[#3D5E52]" /> : <AlertCircle className="w-4 h-4 text-[#8C4A36]" />}
               <span className="font-semibold">{githubFeedback.message}</span>
             </div>
           )}
@@ -465,23 +465,23 @@ export default function SettingsView({
         {/* Save Button for Automation */}
         <button
           onClick={handleSaveConfig}
-          className="w-full min-h-[44px] flex items-center justify-center space-x-1.5 py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 border border-slate-200/90 text-xs font-bold text-slate-800 transition-all active:scale-95"
+          className="w-full min-h-[44px] flex items-center justify-center space-x-1.5 py-2.5 rounded-xl bg-[#FAF8F2] hover:bg-[#F4EFE7] border border-[#E8E1D5] text-xs font-bold text-[#2B2522] transition-all active:scale-95"
         >
-          <Save className="w-3.5 h-3.5 text-rose-600" />
+          <Save className="w-3.5 h-3.5 text-[#3D5E52]" />
           <span>Simpan Seluruh Pengaturan Cloud</span>
         </button>
       </div>
 
       {/* 3. Telegram & Push Notifications Configuration Card */}
-      <div className="p-4 sm:p-5 rounded-2xl bg-white border border-slate-200/80 space-y-4 shadow-[0_2px_10px_-3px_rgba(15,23,42,0.06)]">
+      <div className="p-5 rounded-2xl bg-white border border-[#E8E1D5] space-y-4 shadow-[0_2px_12px_-3px_rgba(43,37,34,0.06)]">
         <div className="flex items-center justify-between">
           <div className="flex items-center space-x-2.5">
-            <div className="p-2 rounded-xl bg-rose-50 text-rose-700 border border-rose-200">
+            <div className="p-2.5 rounded-xl bg-[#FAF0E6] text-[#8C4A36] border border-[#ECD9C8]">
               <Bell className="w-4 h-4" />
             </div>
             <div>
-              <h3 className="text-sm font-bold text-slate-900">Notifikasi Live & Bot Telegram</h3>
-              <p className="text-[11px] text-slate-500">
+              <h3 className="text-sm font-bold text-[#2B2522]">Notifikasi Live & Bot Telegram</h3>
+              <p className="text-[11px] text-[#6D655F]">
                 Peringatan instan ke Telegram & Android saat member mulai live
               </p>
             </div>
@@ -492,14 +492,14 @@ export default function SettingsView({
         <div className="space-y-3 pt-1">
           <div>
             <div className="flex items-center justify-between mb-1">
-              <label className="text-xs font-semibold text-slate-700">
+              <label className="text-xs font-semibold text-[#2B2522]">
                 Telegram Bot Token
               </label>
               <a
                 href="https://t.me/BotFather"
                 target="_blank"
                 rel="noreferrer"
-                className="text-[11px] text-rose-600 hover:text-rose-700 flex items-center space-x-0.5 font-bold"
+                className="text-[11px] text-[#3D5E52] hover:underline flex items-center space-x-0.5 font-bold"
               >
                 <span>Dapatkan dari @BotFather</span>
                 <ExternalLink className="w-3 h-3 ml-0.5" />
@@ -510,16 +510,16 @@ export default function SettingsView({
               value={telegramBotToken}
               onChange={(e) => setTelegramBotToken(e.target.value)}
               placeholder="contoh: 123456789:ABCdefGhIJKlmNoPQRsTUVwxyZ"
-              className="w-full min-h-[42px] px-3.5 py-2 rounded-xl bg-slate-50 border border-slate-200/90 text-xs text-slate-900 placeholder-slate-400 focus:outline-none focus:border-rose-500 focus:bg-white transition-all"
+              className="w-full min-h-[42px] px-3.5 py-2 rounded-xl bg-[#FAF8F2] border border-[#E8E1D5] text-xs text-[#2B2522] placeholder-[#8A8179] focus:outline-none focus:border-[#3D5E52] focus:bg-white transition-all"
             />
           </div>
 
           <div>
             <div className="flex items-center justify-between mb-1">
-              <label className="text-xs font-semibold text-slate-700">
+              <label className="text-xs font-semibold text-[#2B2522]">
                 Telegram Chat / Channel ID
               </label>
-              <span className="text-[10px] text-slate-400 font-medium">
+              <span className="text-[10px] text-[#8A8179] font-medium">
                 Chat ID pribadi atau channel (-100xxxx)
               </span>
             </div>
@@ -528,17 +528,17 @@ export default function SettingsView({
               value={telegramChatId}
               onChange={(e) => setTelegramChatId(e.target.value)}
               placeholder="contoh: 123456789 atau -100123456789"
-              className="w-full min-h-[42px] px-3.5 py-2 rounded-xl bg-slate-50 border border-slate-200/90 text-xs text-slate-900 placeholder-slate-400 focus:outline-none focus:border-rose-500 focus:bg-white transition-all"
+              className="w-full min-h-[42px] px-3.5 py-2 rounded-xl bg-[#FAF8F2] border border-[#E8E1D5] text-xs text-[#2B2522] placeholder-[#8A8179] focus:outline-none focus:border-[#3D5E52] focus:bg-white transition-all"
             />
           </div>
 
           {/* Toggle Browser / Android System Notification */}
-          <div className="flex items-center justify-between p-3.5 rounded-xl bg-slate-50 border border-slate-200/80">
+          <div className="flex items-center justify-between p-3.5 rounded-xl bg-[#FAF8F2] border border-[#E8E1D5]">
             <div>
-              <p className="text-xs font-bold text-slate-900">
+              <p className="text-xs font-bold text-[#2B2522]">
                 Aktifkan Notifikasi Push Browser / Android
               </p>
-              <p className="text-[11px] text-slate-500">
+              <p className="text-[11px] text-[#6D655F]">
                 Munculkan popup banner notifikasi saat member sedang siaran
               </p>
             </div>
@@ -549,16 +549,16 @@ export default function SettingsView({
                 onChange={(e) => setEnableBrowserNotification(e.target.checked)}
                 className="sr-only peer"
               />
-              <div className="w-11 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[12px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-rose-600 shadow-inner"></div>
+              <div className="w-11 h-6 bg-[#E8E1D5] peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[12px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#3D5E52] shadow-inner"></div>
             </label>
           </div>
         </div>
 
         {/* Action Buttons for Telegram */}
-        <div className="flex items-center gap-2 pt-1">
+        <div className="flex items-center gap-2.5 pt-1">
           <button
             onClick={handleSaveConfig}
-            className="flex-1 min-h-[44px] flex items-center justify-center space-x-1.5 py-2 rounded-xl bg-rose-600 hover:bg-rose-700 active:scale-95 text-xs font-bold text-white transition-all shadow-md shadow-rose-600/20"
+            className="flex-1 min-h-[44px] flex items-center justify-center space-x-1.5 py-2 rounded-xl bg-[#3D5E52] hover:bg-[#314D43] active:scale-95 text-xs font-bold text-white transition-all shadow-md shadow-[#3D5E52]/20"
           >
             <Save className="w-3.5 h-3.5" />
             <span>Simpan Notifikasi</span>
@@ -567,9 +567,9 @@ export default function SettingsView({
           <button
             onClick={handleTestTelegram}
             disabled={isTestingTelegram || !telegramBotToken || !telegramChatId}
-            className="flex-1 min-h-[44px] flex items-center justify-center space-x-1.5 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 active:scale-95 text-xs font-bold text-slate-800 transition-all border border-slate-200/90 disabled:opacity-40"
+            className="flex-1 min-h-[44px] flex items-center justify-center space-x-1.5 py-2 rounded-xl bg-[#FAF8F2] hover:bg-[#F4EFE7] active:scale-95 text-xs font-bold text-[#2B2522] transition-all border border-[#E8E1D5] disabled:opacity-40"
           >
-            <Send className={`w-3.5 h-3.5 ${isTestingTelegram ? 'animate-bounce text-rose-600' : 'text-slate-600'}`} />
+            <Send className={`w-3.5 h-3.5 ${isTestingTelegram ? 'animate-bounce text-[#3D5E52]' : 'text-[#6D655F]'}`} />
             <span>{isTestingTelegram ? 'Mengirim...' : 'Tes Kirim Notifikasi'}</span>
           </button>
         </div>
@@ -579,14 +579,14 @@ export default function SettingsView({
           <div
             className={`p-3 rounded-xl text-xs flex items-center space-x-2 border ${
               telegramFeedback.success
-                ? 'bg-emerald-50 border-emerald-200 text-emerald-800'
-                : 'bg-rose-50 border-rose-200 text-rose-800'
+                ? 'bg-[#EAF1EE] border-[#BED5CC] text-[#2D4A3F]'
+                : 'bg-[#FAF0E6] border-[#ECD9C8] text-[#8C4A36]'
             }`}
           >
             {telegramFeedback.success ? (
-              <Check className="w-4 h-4 shrink-0 text-emerald-600" />
+              <Check className="w-4 h-4 shrink-0 text-[#3D5E52]" />
             ) : (
-              <AlertCircle className="w-4 h-4 shrink-0 text-rose-600" />
+              <AlertCircle className="w-4 h-4 shrink-0 text-[#8C4A36]" />
             )}
             <span className="font-semibold">{telegramFeedback.message}</span>
           </div>
@@ -594,15 +594,15 @@ export default function SettingsView({
       </div>
 
       {/* SQL Migration Script Viewer */}
-      <div className="p-4 sm:p-5 rounded-2xl bg-white border border-slate-200/80 space-y-3 shadow-[0_2px_10px_-3px_rgba(15,23,42,0.06)]">
+      <div className="p-5 rounded-2xl bg-white border border-[#E8E1D5] space-y-3.5 shadow-[0_2px_12px_-3px_rgba(43,37,34,0.06)]">
         <div className="flex items-center justify-between">
           <div className="flex items-center space-x-2.5">
-            <div className="p-2 rounded-xl bg-rose-50 text-rose-700 border border-rose-200">
+            <div className="p-2.5 rounded-xl bg-[#EAF1EE] text-[#3D5E52] border border-[#BED5CC]">
               <Code2 className="w-4 h-4" />
             </div>
             <div>
-              <h3 className="text-sm font-bold text-slate-900">Skema Database SQL</h3>
-              <p className="text-[11px] text-slate-500">
+              <h3 className="text-sm font-bold text-[#2B2522]">Skema Database SQL</h3>
+              <p className="text-[11px] text-[#6D655F]">
                 Jalankan di Supabase SQL Editor untuk membuat tabel
               </p>
             </div>
@@ -611,14 +611,14 @@ export default function SettingsView({
           <div className="flex items-center space-x-2">
             <button
               onClick={() => setShowSql(!showSql)}
-              className="min-h-[38px] px-3 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 border border-slate-200/90 text-xs font-bold text-slate-700 transition-all"
+              className="min-h-[38px] px-3.5 py-1.5 rounded-xl bg-[#FAF8F2] hover:bg-[#F4EFE7] border border-[#E8E1D5] text-xs font-bold text-[#2B2522] transition-all"
             >
               {showSql ? 'Sembunyikan' : 'Lihat'}
             </button>
 
             <button
               onClick={handleCopySql}
-              className="min-h-[38px] flex items-center space-x-1 px-3 py-1.5 rounded-xl bg-rose-600 hover:bg-rose-700 text-xs font-bold text-white shadow-xs transition-all active:scale-95"
+              className="min-h-[38px] flex items-center space-x-1 px-3.5 py-1.5 rounded-xl bg-[#3D5E52] hover:bg-[#314D43] text-xs font-bold text-white shadow-xs transition-all active:scale-95"
             >
               {copiedSql ? <Check className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
               <span>{copiedSql ? 'Tersalin!' : 'Salin SQL'}</span>
@@ -627,25 +627,25 @@ export default function SettingsView({
         </div>
 
         {showSql && (
-          <div className="relative rounded-2xl bg-slate-950 border border-slate-800 p-3.5 overflow-x-auto text-[11px] font-mono text-emerald-400 max-h-52 leading-relaxed shadow-inner">
+          <div className="relative rounded-2xl bg-[#2B2522] border border-[#3E3733] p-4 overflow-x-auto text-[11px] font-mono text-[#BED5CC] max-h-52 leading-relaxed shadow-inner">
             <pre>{SQL_MIGRATION_TEXT}</pre>
           </div>
         )}
       </div>
 
       {/* App & Maintenance Actions */}
-      <div className="p-4 sm:p-5 rounded-2xl bg-white border border-slate-200/80 space-y-3 shadow-[0_2px_10px_-3px_rgba(15,23,42,0.06)]">
-        <h3 className="text-sm font-bold text-slate-900 flex items-center space-x-2">
-          <Cpu className="w-4 h-4 text-slate-500" />
+      <div className="p-5 rounded-2xl bg-white border border-[#E8E1D5] space-y-3.5 shadow-[0_2px_12px_-3px_rgba(43,37,34,0.06)]">
+        <h3 className="text-sm font-bold text-[#2B2522] flex items-center space-x-2">
+          <Cpu className="w-4 h-4 text-[#8A8179]" />
           <span>Informasi & Pemeliharaan Aplikasi</span>
         </h3>
 
-        <div className="text-xs text-slate-500 space-y-1">
+        <div className="text-xs text-[#6D655F] space-y-1">
           <p>
-            <strong className="text-slate-800">Versi:</strong> 1.0.0 (Clean Light UI • Anti-Corrupt Recorder)
+            <strong className="text-[#2B2522]">Versi:</strong> 1.0.0 (Warm Earth Tones • Anti-Corrupt Recorder)
           </p>
           <p>
-            <strong className="text-slate-800">Framework:</strong> React + Tailwind CSS + Lucide Icons + Hls.js
+            <strong className="text-[#2B2522]">Framework:</strong> React + Tailwind CSS + Lucide Icons + Hls.js
           </p>
         </div>
 
@@ -655,7 +655,7 @@ export default function SettingsView({
               onResetData();
             }
           }}
-          className="w-full min-h-[44px] flex items-center justify-center space-x-1.5 py-2.5 rounded-xl bg-rose-50 hover:bg-rose-100 border border-rose-200 text-xs font-bold text-rose-700 transition-all active:scale-95"
+          className="w-full min-h-[44px] flex items-center justify-center space-x-1.5 py-2.5 rounded-xl bg-[#FAF0E6] hover:bg-[#F3E5D6] border border-[#ECD9C8] text-xs font-bold text-[#8C4A36] transition-all active:scale-95"
         >
           <RotateCcw className="w-3.5 h-3.5" />
           <span>Reset Data Lokal ke Seed JKT48 Default</span>

@@ -8,23 +8,23 @@ export default function Header({
   isRefreshing = false 
 }) {
   return (
-    <header className="sticky top-0 z-30 bg-white/95 backdrop-blur-md border-b border-slate-200/80 shadow-[0_1px_3px_rgba(0,0,0,0.03)] px-4 py-3 pt-safe">
-      <div className="flex items-center justify-between max-w-lg mx-auto">
+    <header className="sticky top-0 z-30 bg-[#FAF8F2]/90 backdrop-blur-md px-4 sm:px-6 pt-3.5 pb-2">
+      <div className="flex items-center justify-between max-w-lg mx-auto bg-white/95 px-4 sm:px-5 py-3 rounded-2xl border border-[#E8E1D5] shadow-[0_2px_12px_-3px_rgba(43,37,34,0.06)]">
         {/* Brand & Logo */}
-        <div className="flex items-center space-x-2.5">
-          <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-rose-600 to-rose-500 flex items-center justify-center shadow-md shadow-rose-500/20">
-            <Radio className="w-4 h-4 text-white animate-pulse" />
+        <div className="flex items-center space-x-3">
+          <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-[#3D5E52] to-[#4D7566] flex items-center justify-center shadow-md shadow-[#3D5E52]/20 shrink-0">
+            <Radio className="w-4 h-4 text-[#FAF8F2] animate-pulse" />
           </div>
           <div>
             <div className="flex items-center space-x-1.5">
-              <h1 className="font-bold text-base tracking-tight text-slate-900 leading-none">
-                JKT48 <span className="text-rose-600">Live</span>
+              <h1 className="font-bold text-base tracking-tight text-[#2B2522] leading-none">
+                JKT48 <span className="text-[#3D5E52]">Live</span>
               </h1>
-              <span className="text-[10px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded bg-rose-50 text-rose-700 border border-rose-200">
+              <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-md bg-[#FAF0E6] text-[#8C4A36] border border-[#ECD9C8]">
                 REC
               </span>
             </div>
-            <p className="text-[11px] text-slate-500 font-medium mt-0.5">
+            <p className="text-[11px] text-[#6D655F] font-medium mt-0.5">
               Cloud Auto-Recorder
             </p>
           </div>
@@ -34,13 +34,13 @@ export default function Header({
         <div className="flex items-center space-x-2">
           {/* Live badge count */}
           {activeLivesCount > 0 ? (
-            <div className="flex items-center space-x-1.5 px-2.5 py-1 rounded-full bg-rose-50 border border-rose-200 text-rose-700 text-xs font-semibold shadow-xs">
-              <span className="w-2 h-2 rounded-full bg-rose-600 rec-pulse"></span>
+            <div className="flex items-center space-x-1.5 px-3 py-1 rounded-full bg-[#FAF0E6] border border-[#ECD9C8] text-[#8C4A36] text-xs font-semibold shadow-xs">
+              <span className="w-2 h-2 rounded-full bg-[#C94A3D] rec-pulse"></span>
               <span>{activeLivesCount} Live</span>
             </div>
           ) : (
-            <div className="flex items-center space-x-1.5 px-2.5 py-1 rounded-full bg-slate-100 border border-slate-200 text-slate-600 text-xs font-medium">
-              <span className="w-1.5 h-1.5 rounded-full bg-slate-400"></span>
+            <div className="flex items-center space-x-1.5 px-3 py-1 rounded-full bg-[#F4EFE7] border border-[#E8E1D5] text-[#6D655F] text-xs font-medium">
+              <span className="w-1.5 h-1.5 rounded-full bg-[#B6ACA3]"></span>
               <span>0 Live</span>
             </div>
           )}
@@ -48,13 +48,13 @@ export default function Header({
           {/* Connection status pill */}
           <div 
             title={isConnected ? "Terhubung ke Supabase" : "Mode Offline / Lokal"}
-            className={`p-2 rounded-xl border text-xs flex items-center justify-center min-w-[36px] min-h-[36px] transition-colors ${
+            className={`p-2 rounded-xl border text-xs flex items-center justify-center min-w-[38px] min-h-[38px] transition-colors ${
               isConnected 
-                ? 'bg-emerald-50 text-emerald-700 border-emerald-200' 
-                : 'bg-amber-50 text-amber-700 border-amber-200'
+                ? 'bg-[#EAF1EE] text-[#3D5E52] border-[#BED5CC]' 
+                : 'bg-[#FAF0E6] text-[#8C4A36] border-[#ECD9C8]'
             }`}
           >
-            {isConnected ? <Wifi className="w-3.5 h-3.5" /> : <WifiOff className="w-3.5 h-3.5" />}
+            {isConnected ? <Wifi className="w-4 h-4" /> : <WifiOff className="w-4 h-4" />}
           </div>
 
           {/* Refresh button */}
@@ -62,9 +62,9 @@ export default function Header({
             onClick={onRefresh}
             disabled={isRefreshing}
             aria-label="Refresh Data"
-            className="p-2 rounded-xl bg-white hover:bg-slate-50 border border-slate-200 text-slate-600 hover:text-slate-900 active:scale-95 transition-all shadow-xs disabled:opacity-50 min-w-[36px] min-h-[36px] flex items-center justify-center"
+            className="p-2 rounded-xl bg-white hover:bg-[#FAF8F2] border border-[#E8E1D5] text-[#2B2522] hover:text-[#3D5E52] active:scale-95 transition-all shadow-xs disabled:opacity-50 min-w-[38px] min-h-[38px] flex items-center justify-center"
           >
-            <RefreshCw className={`w-3.5 h-3.5 ${isRefreshing ? 'animate-spin text-rose-600' : ''}`} />
+            <RefreshCw className={`w-4 h-4 ${isRefreshing ? 'animate-spin text-[#3D5E52]' : ''}`} />
           </button>
         </div>
       </div>

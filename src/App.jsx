@@ -285,7 +285,7 @@ export default function App() {
   ).length;
 
   return (
-    <div className="min-h-screen bg-slate-50 text-slate-900 flex flex-col selection:bg-rose-500 selection:text-white">
+    <div className="min-h-screen bg-[#FAF8F2] text-[#2B2522] flex flex-col selection:bg-[#3D5E52] selection:text-white">
       {/* Top Mobile Header */}
       <Header
         isConnected={isConnected}
