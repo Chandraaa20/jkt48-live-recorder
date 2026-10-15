@@ -99,6 +99,11 @@ jobs:
             REFERER_URL="https://www.showroom-live.com/"
           fi
 
+          echo "Resolving active stream playlist URL..."
+          node cloud-backend/resolve-stream.cjs "$STREAM_URL" "$PLATFORM"
+          TARGET_URL="${RESOLVED_STREAM_URL:-$STREAM_URL}"
+          echo "Target Stream URL to record: $TARGET_URL"
+
           # Anti-corruption segmenter: MPEG-TS format is packetized and 100% playable even if cut mid-stream
           echo "Attempting stream recording via direct HLS connection..."
           ffmpeg -hide_banner -loglevel warning \
@@ -107,7 +112,7 @@ jobs:
             -reconnect 1 \
             -reconnect_streamed 1 \
             -reconnect_delay_max 5 \
-            -i "$STREAM_URL" \
+            -i "$TARGET_URL" \
             -c copy \
             -f segment \
             -segment_time 3600 \
@@ -128,7 +133,7 @@ jobs:
 
           if [ ${#VALID_TS[@]} -eq 0 ]; then
             echo "Direct capture produced 0 segments. Falling back to Cloudflare Stream Proxy..."
-            ENCODED_URL=$(node -e "console.log(encodeURIComponent(process.argv[1]))" "$STREAM_URL")
+            ENCODED_URL=$(node -e "console.log(encodeURIComponent(process.argv[1]))" "$TARGET_URL")
             PROXY_URL="https://jkt48-live-watcher.chandra02new.workers.dev/api/proxy?url=${ENCODED_URL}"
             
             ffmpeg -hide_banner -loglevel warning \

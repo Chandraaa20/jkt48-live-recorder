@@ -565,16 +565,24 @@ async function handleHlsProxy(request, env, corsHeaders) {
       referer = 'https://www.showroom-live.com/';
     }
 
-    const upstreamRes = await fetch(targetUrl, {
-      headers: {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-        'Referer': referer,
-      },
-    });
+    let upstreamRes = null;
+    for (let attempt = 0; attempt < 4; attempt++) {
+      upstreamRes = await fetch(targetUrl, {
+        headers: {
+          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+          'Referer': referer,
+        },
+      });
+      if (upstreamRes.ok) break;
+      if (upstreamRes.status === 403 && attempt < 3) {
+        // Small delay to bypass Amazon IVS edge rate-limiting
+        await new Promise((resolve) => setTimeout(resolve, 350));
+      }
+    }
 
-    if (!upstreamRes.ok) {
-      return new Response(`Upstream error: ${upstreamRes.status}`, {
-        status: upstreamRes.status,
+    if (!upstreamRes || !upstreamRes.ok) {
+      return new Response(`Upstream error: ${upstreamRes ? upstreamRes.status : 'Unknown'}`, {
+        status: upstreamRes ? upstreamRes.status : 502,
         headers: { ...corsHeaders, 'Content-Type': 'text/plain' },
       });
     }
