@@ -107,7 +107,6 @@ jobs:
           # Anti-corruption segmenter: MPEG-TS format is packetized and 100% playable even if cut mid-stream
           echo "Attempting stream recording via direct HLS connection..."
           ffmpeg -hide_banner -loglevel warning \
-            -allowed_segment_extensions ALL \
             -user_agent "$USER_AGENT" \
             -referer "$REFERER_URL" \
             -reconnect 1 \
@@ -136,10 +135,9 @@ jobs:
           if [ ${#VALID_TS[@]} -eq 0 ]; then
             echo "Direct capture produced 0 segments. Falling back to Cloudflare Stream Proxy..."
             ENCODED_URL=$(node -e "console.log(encodeURIComponent(process.argv[1]))" "$TARGET_URL")
-            PROXY_URL="https://jkt48-live-watcher.chandra02new.workers.dev/api/proxy/live.m3u8?url=${ENCODED_URL}"
+            PROXY_URL="https://jkt48-live-watcher.chandra02new.workers.dev/api/proxy/stream.m3u8?url=${ENCODED_URL}"
             
             ffmpeg -hide_banner -loglevel warning \
-              -allowed_segment_extensions ALL \
               -user_agent "$USER_AGENT" \
               -referer "$REFERER_URL" \
               -reconnect 1 \
