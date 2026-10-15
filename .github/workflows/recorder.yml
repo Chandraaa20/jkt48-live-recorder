@@ -111,37 +111,54 @@ jobs:
           fi
 
           echo "Resolving active stream playlist URL..."
+          ORIGIN_HEADER="https://www.idn.app"
+          if [ "$PLATFORM" = "showroom" ]; then
+            ORIGIN_HEADER="https://www.showroom-live.com"
+          fi
+
           TARGET_URL="$STREAM_URL"
           if [ "$PLATFORM" = "idn" ] || [[ "$STREAM_URL" =~ live-video\.net ]]; then
-            # Amazon IVS blocks datacenter IPs (Azure/GitHub Actions) with 403.
-            # Route through Cloudflare Worker proxy and resolve child variant playlist directly.
-            ENCODED_URL=$(node -e "console.log(encodeURIComponent(process.argv[1]))" "$STREAM_URL")
-            MASTER_PROXY="https://jkt48-live-watcher.chandra02new.workers.dev/api/proxy/stream.m3u8?url=${ENCODED_URL}"
-            echo "Master Proxy URL: $MASTER_PROXY"
-            
-            # Fetch variant playlist through Worker Proxy to obtain the direct child variant URL
-            CHILD_PROXY=$(curl -sL "$MASTER_PROXY" | grep -v '^#' | grep -E '^https?://' | head -n 1 || true)
-            if [ -n "$CHILD_PROXY" ]; then
-              TARGET_URL="$CHILD_PROXY"
-              echo "Resolved Child Playlist Proxy URL: $TARGET_URL"
+            # Test direct connection first with browser headers
+            DIRECT_HTTP=$(curl -s -o /dev/null -w "%{http_code}" -A "$USER_AGENT" -H "Origin: $ORIGIN_HEADER" -H "Referer: $REFERER_URL" "$STREAM_URL" || echo "000")
+            echo "Direct stream test returned HTTP $DIRECT_HTTP"
+
+            if [ "$DIRECT_HTTP" = "200" ]; then
+              echo "Direct connection successful! Using direct stream URL."
+              TARGET_URL="$STREAM_URL"
             else
-              TARGET_URL="$MASTER_PROXY"
-              echo "Using Master Playlist Proxy URL: $TARGET_URL"
+              echo "Direct stream returned $DIRECT_HTTP. Routing via Cloudflare Worker Proxy..."
+              ENCODED_URL=$(node -e "console.log(encodeURIComponent(process.argv[1]))" "$STREAM_URL")
+              MASTER_PROXY="https://jkt48-live-watcher.chandra02new.workers.dev/api/proxy/stream.m3u8?url=${ENCODED_URL}"
+              echo "Master Proxy URL: $MASTER_PROXY"
+              
+              # Fetch variant playlist through Worker Proxy using browser User-Agent
+              CHILD_PROXY=$(curl -sL -A "$USER_AGENT" -H "Origin: $ORIGIN_HEADER" -H "Referer: $REFERER_URL" "$MASTER_PROXY" | grep -v '^#' | grep -E '^https?://' | head -n 1 || true)
+              if [ -n "$CHILD_PROXY" ]; then
+                TARGET_URL="$CHILD_PROXY"
+                echo "Resolved Child Playlist Proxy URL: $TARGET_URL"
+              else
+                TARGET_URL="$MASTER_PROXY"
+                echo "Using Master Playlist Proxy URL: $TARGET_URL"
+              fi
             fi
           else
             echo "Showroom Stream direct HLS: $TARGET_URL"
           fi
 
           echo "Starting recording engine..."
+          # Both streamlink and ffmpeg need the proper browser headers and origin
           if command -v streamlink >/dev/null 2>&1; then
             echo "Capturing stream using Streamlink..."
-            streamlink --http-header "Origin=$REFERER_URL" --http-header "Referer=$REFERER_URL" "$TARGET_URL" best -o "raw_segments/rec_part_000.ts" --retry-streams 5 --retry-open 5 &
+            streamlink \
+              --http-header "User-Agent=$USER_AGENT" \
+              --http-header "Origin=$ORIGIN_HEADER" \
+              --http-header "Referer=$REFERER_URL" \
+              "$TARGET_URL" best -o "raw_segments/rec_part_000.ts" --retry-streams 5 --retry-open 5 &
             REC_PID=$!
           else
             echo "Capturing stream using FFmpeg..."
             ffmpeg -hide_banner -loglevel warning \
-              -user_agent "$USER_AGENT" \
-              -referer "$REFERER_URL" \
+              -headers "User-Agent: ${USER_AGENT}\r\nOrigin: ${ORIGIN_HEADER}\r\nReferer: ${REFERER_URL}\r\n" \
               -reconnect 1 \
               -reconnect_streamed 1 \
               -reconnect_delay_max 5 \
@@ -194,10 +211,9 @@ jobs:
           done
 
           if [ ${#VALID_TS[@]} -eq 0 ]; then
-            echo "First attempt produced 0 segments. Trying FFmpeg fallback with proxy..."
+            echo "First attempt produced 0 segments. Trying FFmpeg fallback with browser headers..."
             ffmpeg -hide_banner -loglevel warning \
-              -user_agent "$USER_AGENT" \
-              -referer "$REFERER_URL" \
+              -headers "User-Agent: ${USER_AGENT}\r\nOrigin: ${ORIGIN_HEADER}\r\nReferer: ${REFERER_URL}\r\n" \
               -reconnect 1 \
               -reconnect_streamed 1 \
               -reconnect_delay_max 5 \
