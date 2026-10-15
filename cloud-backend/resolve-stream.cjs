@@ -17,60 +17,52 @@ async function resolveStream() {
   console.error(`[StreamResolver] Resolving stream for platform: ${platform}`);
   console.error(`[StreamResolver] Source URL: ${url}`);
 
+  const isIdn = platform === 'idn' || url.includes('live-video.net');
+  const urlsToTry = isIdn
+    ? [
+        `https://jkt48-live-watcher.chandra02new.workers.dev/api/proxy/stream.m3u8?url=${encodeURIComponent(url)}`,
+        url,
+      ]
+    : [
+        url,
+        `https://jkt48-live-watcher.chandra02new.workers.dev/api/proxy/stream.m3u8?url=${encodeURIComponent(url)}`,
+      ];
+
   let resolvedUrl = url;
 
-  for (let attempt = 1; attempt <= 4; attempt++) {
-    try {
-      const res = await fetch(url, {
-        headers: {
-          'Referer': referer,
-          'User-Agent': ua,
-        },
-      });
+  for (const currentUrl of urlsToTry) {
+    for (let attempt = 1; attempt <= 3; attempt++) {
+      try {
+        const res = await fetch(currentUrl, {
+          headers: {
+            'Referer': referer,
+            'User-Agent': ua,
+          },
+        });
 
-      if (res.ok) {
-        const text = await res.text();
-        const lines = text.split('\n');
+        if (res.ok) {
+          const text = await res.text();
+          const lines = text.split('\n');
 
-        // Look for variant stream (.m3u8)
-        for (const line of lines) {
-          const trimmed = line.trim();
-          if (trimmed && !trimmed.startsWith('#') && (trimmed.includes('.m3u8') || trimmed.startsWith('http'))) {
-            resolvedUrl = new URL(trimmed, url).toString();
-            console.error(`[StreamResolver] Successfully resolved child media playlist: ${resolvedUrl}`);
-            break;
+          // Look for child variant stream (.m3u8)
+          for (const line of lines) {
+            const trimmed = line.trim();
+            if (trimmed && !trimmed.startsWith('#') && (trimmed.includes('.m3u8') || trimmed.startsWith('http'))) {
+              resolvedUrl = trimmed.startsWith('http') ? trimmed : new URL(trimmed, currentUrl).toString();
+              console.error(`[StreamResolver] Successfully resolved child media playlist: ${resolvedUrl}`);
+              break;
+            }
           }
+          if (resolvedUrl !== url) break;
+        } else {
+          console.error(`[StreamResolver] URL attempt ${attempt} returned status ${res.status}`);
         }
-        break;
-      } else {
-        console.error(`[StreamResolver] Attempt ${attempt} returned status ${res.status}`);
+      } catch (e) {
+        console.error(`[StreamResolver] URL attempt ${attempt} error:`, e.message);
       }
-    } catch (e) {
-      console.error(`[StreamResolver] Attempt ${attempt} error:`, e.message);
+      await new Promise((r) => setTimeout(r, 300));
     }
-    await new Promise((r) => setTimeout(r, 400));
-  }
-
-  // If still equal to source or failed, try via Cloudflare Worker proxy
-  if (resolvedUrl === url) {
-    try {
-      const proxyUrl = `https://jkt48-live-watcher.chandra02new.workers.dev/api/proxy/stream.m3u8?url=${encodeURIComponent(url)}`;
-      const pRes = await fetch(proxyUrl);
-      if (pRes.ok) {
-        const text = await pRes.text();
-        const lines = text.split('\n');
-        for (const line of lines) {
-          const trimmed = line.trim();
-          if (trimmed && !trimmed.startsWith('#') && (trimmed.includes('.m3u8') || trimmed.startsWith('http'))) {
-            resolvedUrl = trimmed;
-            console.error(`[StreamResolver] Successfully resolved via Worker Proxy: ${resolvedUrl}`);
-            break;
-          }
-        }
-      }
-    } catch (e) {
-      console.error('[StreamResolver] Worker proxy resolution fallback error:', e.message);
-    }
+    if (resolvedUrl !== url) break;
   }
 
   // If in GitHub Actions, also append to GITHUB_ENV
