@@ -195,11 +195,21 @@ export default function App() {
     return res;
   };
 
-  // Finish a Recording
+  // Finish a Recording and Upload to Telegram
   const handleFinishRecording = async (recId) => {
-    await finishRecording(recId);
-    const refreshedRecs = await getRecordings();
-    setRecordings(refreshedRecs);
+    // Instantly mark UI as uploading
+    setRecordings((prev) =>
+      prev.map((r) =>
+        r.id === recId ? { ...r, status: 'uploading' } : r
+      )
+    );
+    try {
+      await finishRecording(recId);
+      const refreshedRecs = await getRecordings();
+      setRecordings(refreshedRecs);
+    } catch (err) {
+      console.error('handleFinishRecording error:', err);
+    }
   };
 
   // Simulate a test live stream (e.g. if list is empty or for instant player testing)
@@ -278,6 +288,7 @@ export default function App() {
     setSelectedLive(live);
     setIsPlayerOpen(true);
   };
+
 
   // Count active recordings
   const activeRecCount = recordings.filter(
