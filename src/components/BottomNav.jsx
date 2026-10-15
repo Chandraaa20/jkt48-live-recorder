@@ -44,7 +44,7 @@ export default function BottomNav({
   ];
 
   return (
-    <nav className="fixed bottom-0 left-0 right-0 z-40 bg-dark-bg/95 backdrop-blur-lg border-t border-dark-border pb-safe">
+    <nav className="fixed bottom-0 left-0 right-0 z-40 bg-white/95 backdrop-blur-lg border-t border-slate-200/80 shadow-[0_-4px_20px_rgba(15,23,42,0.04)] pb-safe">
       <div className="max-w-lg mx-auto flex items-center justify-around h-16 px-2">
         {navItems.map((item) => {
           const Icon = item.icon;
@@ -55,27 +55,26 @@ export default function BottomNav({
               key={item.id}
               id={`nav-tab-${item.id}`}
               onClick={() => {
-                console.log('Switching tab to:', item.id);
                 onTabChange(item.id);
               }}
-              className={`relative flex flex-col items-center justify-center flex-1 h-full py-1 transition-all duration-150 select-none cursor-pointer z-50 ${
+              className={`relative flex flex-col items-center justify-center flex-1 h-full py-1.5 transition-all duration-150 select-none cursor-pointer min-h-[48px] ${
                 isActive
-                  ? 'text-rose-500 font-semibold scale-100'
-                  : 'text-slate-400 hover:text-slate-200 active:scale-95'
+                  ? 'text-rose-600 font-semibold'
+                  : 'text-slate-400 hover:text-slate-600 active:scale-95'
               }`}
             >
               {/* Active subtle pill indicator on top */}
               {isActive && (
-                <span className="absolute top-0 w-8 h-0.5 rounded-full bg-rose-500 shadow-sm shadow-rose-500/50" />
+                <span className="absolute top-0 w-8 h-1 rounded-full bg-rose-600 shadow-xs shadow-rose-500/30" />
               )}
 
               {/* Icon with relative badge */}
               <div className="relative my-0.5">
-                <Icon className={`w-5 h-5 transition-transform ${isActive ? 'scale-110' : ''}`} />
+                <Icon className={`w-5 h-5 transition-transform ${isActive ? 'scale-110 text-rose-600' : 'text-slate-400'}`} />
                 {item.badge && (
                   <span
-                    className={`absolute -top-1.5 -right-2.5 min-w-[16px] h-4 px-1 rounded-full text-[10px] font-bold text-white flex items-center justify-center ${
-                      item.badgeColor || 'bg-rose-500'
+                    className={`absolute -top-1.5 -right-2.5 min-w-[16px] h-4 px-1 rounded-full text-[10px] font-bold text-white flex items-center justify-center shadow-xs ${
+                      item.badgeColor || 'bg-rose-600'
                     }`}
                   >
                     {item.badge}
@@ -84,7 +83,7 @@ export default function BottomNav({
               </div>
 
               {/* Label */}
-              <span className={`text-[11px] tracking-tight leading-tight mt-0.5 ${isActive ? 'text-rose-400 font-semibold' : 'text-slate-400'}`}>
+              <span className={`text-[11px] tracking-tight leading-tight mt-0.5 ${isActive ? 'text-rose-600 font-bold' : 'text-slate-500 font-medium'}`}>
                 {item.label}
               </span>
             </button>

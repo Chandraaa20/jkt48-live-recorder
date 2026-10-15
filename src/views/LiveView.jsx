@@ -49,27 +49,27 @@ export default function LiveView({
 
   if (loading) {
     return (
-      <div className="space-y-4 px-4 py-4 max-w-lg mx-auto">
-        <div className="h-6 w-36 bg-dark-card animate-pulse rounded-md" />
+      <div className="space-y-4 px-4 sm:px-5 pt-4 pb-28 max-w-lg mx-auto">
+        <div className="h-6 w-36 bg-slate-200 animate-pulse rounded-md" />
         {[1, 2].map((i) => (
-          <div key={i} className="h-56 rounded-2xl bg-dark-card animate-pulse border border-dark-border" />
+          <div key={i} className="h-60 rounded-2xl bg-white animate-pulse border border-slate-200/80 shadow-xs" />
         ))}
       </div>
     );
   }
 
   return (
-    <div className="px-4 py-4 max-w-lg mx-auto space-y-4 pb-24">
+    <div className="px-4 sm:px-5 pt-4 pb-28 max-w-lg mx-auto space-y-4">
       {/* Top Banner / Headline */}
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-lg font-bold text-white tracking-tight flex items-center space-x-2">
+          <h2 className="text-lg font-bold text-slate-900 tracking-tight flex items-center space-x-2">
             <span>Sedang Live Sekarang</span>
             {lives.length > 0 && (
-              <span className="w-2 h-2 rounded-full bg-rose-500 rec-pulse" />
+              <span className="w-2.5 h-2.5 rounded-full bg-rose-600 rec-pulse" />
             )}
           </h2>
-          <p className="text-xs text-dark-muted">
+          <p className="text-xs text-slate-500 font-medium">
             Streaming langsung dari IDN Live & Showroom
           </p>
         </div>
@@ -79,20 +79,20 @@ export default function LiveView({
           {hasSimulated && onClearSimulated && (
             <button
               onClick={onClearSimulated}
-              className="flex items-center space-x-1 px-2.5 py-1 rounded-lg bg-rose-950/60 hover:bg-rose-900/80 border border-rose-500/40 text-[11px] font-semibold text-rose-300 hover:text-white transition-all shadow-xs"
+              className="flex items-center space-x-1 px-2.5 py-1.5 rounded-xl bg-rose-50 hover:bg-rose-100 border border-rose-200 text-[11px] font-semibold text-rose-700 transition-all shadow-xs"
               title="Hapus data simulasi & kembali ke pemantauan live asli"
             >
-              <Trash2 className="w-3.5 h-3.5 text-rose-400" />
+              <Trash2 className="w-3.5 h-3.5 text-rose-600" />
               <span>Hapus Simulasi</span>
             </button>
           )}
 
           <button
             onClick={onSimulateLive}
-            className="flex items-center space-x-1 px-2.5 py-1 rounded-lg bg-dark-card hover:bg-dark-hover border border-dark-border text-[11px] font-medium text-slate-300 hover:text-white transition-colors"
+            className="flex items-center space-x-1 px-3 py-1.5 rounded-xl bg-white hover:bg-slate-50 border border-slate-200 text-[11px] font-semibold text-slate-700 transition-colors shadow-xs"
             title="Simulasi live baru untuk testing player & cloud recording"
           >
-            <Sparkles className="w-3.5 h-3.5 text-rose-400" />
+            <Sparkles className="w-3.5 h-3.5 text-rose-600" />
             <span>Simulasi Live</span>
           </button>
         </div>
@@ -100,15 +100,15 @@ export default function LiveView({
 
       {/* Simulated Live Alert Banner */}
       {hasSimulated && (
-        <div className="flex items-center justify-between px-3 py-2 rounded-xl bg-amber-500/10 border border-amber-500/25 text-xs text-amber-300">
+        <div className="flex items-center justify-between px-3.5 py-2.5 rounded-xl bg-amber-50 border border-amber-200 text-xs text-amber-800 shadow-xs">
           <div className="flex items-center space-x-2">
-            <span className="w-2 h-2 rounded-full bg-amber-400 animate-ping" />
-            <span className="font-medium">Data simulasi aktif untuk pengetesan.</span>
+            <span className="w-2 h-2 rounded-full bg-amber-500 animate-ping" />
+            <span className="font-medium">Data simulasi aktif untuk pengetesan player & recorder.</span>
           </div>
           {onClearSimulated && (
             <button
               onClick={onClearSimulated}
-              className="text-[11px] font-bold text-amber-300 hover:text-white underline ml-2"
+              className="text-[11px] font-bold text-amber-900 hover:underline ml-2"
             >
               Bersihkan
             </button>
@@ -118,21 +118,21 @@ export default function LiveView({
 
       {/* Clean Empty State when no members are live */}
       {lives.length === 0 && (
-        <div className="p-8 rounded-2xl bg-dark-card border border-dark-border text-center space-y-4 my-6">
-          <div className="w-14 h-14 mx-auto rounded-2xl bg-rose-500/10 border border-rose-500/20 flex items-center justify-center text-rose-400">
+        <div className="p-8 rounded-2xl bg-white border border-slate-200/80 shadow-[0_2px_10px_-3px_rgba(15,23,42,0.06)] text-center space-y-4 my-4">
+          <div className="w-14 h-14 mx-auto rounded-2xl bg-rose-50 border border-rose-100 flex items-center justify-center text-rose-600">
             <Radio className="w-7 h-7" />
           </div>
           <div className="space-y-1">
-            <h3 className="text-base font-bold text-white">
+            <h3 className="text-base font-bold text-slate-900">
               Belum ada member JKT48 yang sedang live saat ini
             </h3>
-            <p className="text-xs text-dark-muted max-w-xs mx-auto">
+            <p className="text-xs text-slate-500 max-w-xs mx-auto leading-relaxed">
               Saat ini tidak ada siaran langsung di IDN Live maupun Showroom. Data otomatis diperbarui setiap 60 detik.
             </p>
           </div>
           <button
             onClick={onSimulateLive}
-            className="inline-flex items-center space-x-2 px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 border border-dark-border text-xs font-semibold text-slate-200 hover:text-white active:scale-95 transition-all"
+            className="inline-flex items-center space-x-2 px-4 py-2.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-xs font-semibold text-white active:scale-95 transition-all shadow-xs"
           >
             <Sparkles className="w-4 h-4 text-rose-400" />
             <span>Mulai Simulasi Live (Testing)</span>
@@ -141,7 +141,7 @@ export default function LiveView({
       )}
 
       {/* Live Cards List */}
-      <div className="space-y-4">
+      <div className="space-y-3.5">
         {lives.map((live) => {
           const member = live.member || {};
           const isShowroom = live.platform?.toLowerCase() === 'showroom';
@@ -150,7 +150,7 @@ export default function LiveView({
           return (
             <div
               key={live.id}
-              className="group relative rounded-2xl bg-dark-card border border-dark-border overflow-hidden hover:border-slate-700 transition-all duration-200 shadow-lg shadow-black/40"
+              className="group relative rounded-2xl bg-white border border-slate-200/80 hover:border-slate-300 transition-all duration-200 shadow-[0_2px_12px_-3px_rgba(15,23,42,0.06)] overflow-hidden"
             >
               {/* Thumbnail Container (Click to Play) */}
               <div
@@ -168,17 +168,17 @@ export default function LiveView({
                   loading="lazy"
                 />
 
-                {/* Gradient shade */}
-                <div className="absolute inset-0 bg-gradient-to-t from-dark-card via-black/30 to-black/60" />
+                {/* Subtle dark gradient overlay on thumbnail only */}
+                <div className="absolute inset-0 bg-gradient-to-t from-slate-950/80 via-black/25 to-black/40" />
 
                 {/* Top badges bar on thumbnail */}
                 <div className="absolute top-2.5 inset-x-2.5 flex items-center justify-between">
                   {/* Platform badge */}
                   <span
-                    className={`px-2.5 py-0.5 rounded-full text-[11px] font-bold uppercase tracking-wider shadow-sm flex items-center space-x-1 ${
+                    className={`px-2.5 py-0.5 rounded-full text-[11px] font-extrabold uppercase tracking-wider shadow-sm flex items-center space-x-1 ${
                       isShowroom
-                        ? 'bg-cyan-500 text-black font-extrabold shadow-cyan-500/30'
-                        : 'bg-rose-600 text-white font-extrabold shadow-rose-600/30'
+                        ? 'bg-sky-500 text-white shadow-sky-500/20'
+                        : 'bg-rose-600 text-white shadow-rose-600/20'
                     }`}
                   >
                     <span>{live.platform?.toUpperCase() || 'IDN'}</span>
@@ -191,23 +191,23 @@ export default function LiveView({
                       <span>[REC] Cloud Recording</span>
                     </div>
                   ) : (
-                    <div className="flex items-center space-x-1 px-2 py-0.5 rounded-full bg-black/60 text-slate-300 text-[10px] font-medium">
-                      <Clock className="w-3 h-3 text-slate-400" />
+                    <div className="flex items-center space-x-1 px-2 py-0.5 rounded-full bg-black/60 text-white text-[10px] font-medium">
+                      <Clock className="w-3 h-3 text-slate-300" />
                       <span>{durationStr}</span>
                     </div>
                   )}
                 </div>
 
                 {/* Center Big Play Button hover affordance */}
-                <div className="absolute inset-0 flex items-center justify-center opacity-85 group-hover:opacity-100 group-hover:scale-110 transition-all">
-                  <div className="w-12 h-12 rounded-full bg-rose-600/90 text-white flex items-center justify-center shadow-xl shadow-rose-950/80 backdrop-blur-xs">
+                <div className="absolute inset-0 flex items-center justify-center opacity-90 group-hover:opacity-100 group-hover:scale-110 transition-all">
+                  <div className="w-12 h-12 rounded-full bg-rose-600 text-white flex items-center justify-center shadow-lg shadow-rose-950/50">
                     <Play className="w-5 h-5 ml-0.5 fill-white" />
                   </div>
                 </div>
 
                 {/* Bottom timer indicator on thumbnail */}
                 {live.is_recording && (
-                  <div className="absolute bottom-2 left-2.5 flex items-center space-x-1 text-slate-300 text-[11px] font-medium bg-black/60 px-2 py-0.5 rounded-md backdrop-blur-xs">
+                  <div className="absolute bottom-2 left-2.5 flex items-center space-x-1 text-white text-[11px] font-medium bg-black/70 px-2 py-0.5 rounded-md backdrop-blur-xs">
                     <Clock className="w-3 h-3 text-rose-400" />
                     <span>Durasi: {durationStr}</span>
                   </div>
@@ -215,29 +215,29 @@ export default function LiveView({
               </div>
 
               {/* Bottom Card Info & Actions */}
-              <div className="p-3.5 space-y-3">
+              <div className="p-4 space-y-3">
                 <div className="flex items-start justify-between gap-2.5">
-                  <div className="flex items-center space-x-3 overflow-hidden">
+                  <div className="flex items-center space-x-3 overflow-hidden min-w-0">
                     <img
                       src={
                         member.avatar_url ||
                         'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&h=100&fit=crop'
                       }
                       alt={member.name || 'Member'}
-                      className="w-10 h-10 rounded-full object-cover border border-dark-border shrink-0"
+                      className="w-10 h-10 rounded-full object-cover border border-slate-200 shrink-0"
                     />
                     <div className="truncate">
                       <div className="flex items-center space-x-1.5">
-                        <span className="font-bold text-sm text-white truncate">
+                        <span className="font-bold text-sm text-slate-900 truncate">
                           {member.name || 'JKT48 Member'}
                         </span>
                         {member.generation && (
-                          <span className="text-[10px] px-1.5 py-0.2 rounded bg-slate-800 text-slate-400 font-medium">
+                          <span className="text-[10px] px-1.5 py-0.2 rounded bg-slate-100 text-slate-600 border border-slate-200 font-semibold">
                             Gen {member.generation}
                           </span>
                         )}
                       </div>
-                      <p className="text-xs text-slate-300 truncate mt-0.5 font-medium">
+                      <p className="text-xs text-slate-600 truncate mt-0.5 font-medium">
                         {live.title || 'Live Streaming'}
                       </p>
                     </div>
@@ -245,13 +245,13 @@ export default function LiveView({
                 </div>
 
                 {/* Card Action Buttons */}
-                <div className="pt-1 flex items-center gap-2 border-t border-dark-border/60">
+                <div className="pt-2 flex items-center gap-2 border-t border-slate-100">
                   {/* Watch Button */}
                   <button
                     onClick={() => onOpenPlayer(live)}
-                    className="flex-1 flex items-center justify-center space-x-1.5 py-2 rounded-xl bg-slate-800/80 hover:bg-slate-700/80 active:scale-98 text-xs font-semibold text-slate-100 transition-all"
+                    className="flex-1 flex items-center justify-center space-x-1.5 py-2.5 rounded-xl bg-slate-50 hover:bg-slate-100 border border-slate-200 active:scale-98 text-xs font-semibold text-slate-700 transition-all min-h-[42px]"
                   >
-                    <Play className="w-3.5 h-3.5 fill-slate-100" />
+                    <Play className="w-3.5 h-3.5 fill-slate-700" />
                     <span>Nonton Stream</span>
                   </button>
 
@@ -268,14 +268,14 @@ export default function LiveView({
                           live.stream_url
                         )
                       }
-                      className="flex-1 flex items-center justify-center space-x-1.5 py-2 rounded-xl bg-rose-600/90 hover:bg-rose-500 active:scale-98 text-xs font-bold text-white transition-all shadow-md shadow-rose-950/40"
+                      className="flex-1 flex items-center justify-center space-x-1.5 py-2.5 rounded-xl bg-rose-600 hover:bg-rose-700 active:scale-98 text-xs font-bold text-white transition-all shadow-xs min-h-[42px]"
                     >
                       <Disc3 className="w-3.5 h-3.5 animate-spin" style={{ animationDuration: '3s' }} />
                       <span>Picu Rekam Manual</span>
                     </button>
                   ) : (
-                    <div className="flex-1 flex items-center justify-center space-x-1.5 py-2 rounded-xl bg-rose-500/10 border border-rose-500/30 text-xs font-bold text-rose-400">
-                      <span className="w-2 h-2 rounded-full bg-rose-500 rec-pulse" />
+                    <div className="flex-1 flex items-center justify-center space-x-1.5 py-2.5 rounded-xl bg-amber-50 border border-amber-200 text-xs font-bold text-amber-700 min-h-[42px]">
+                      <span className="w-2 h-2 rounded-full bg-amber-500 rec-pulse" />
                       <span>Sedang Merekam</span>
                     </div>
                   )}

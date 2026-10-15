@@ -29,11 +29,35 @@ import {
   sendDeviceNotification,
 } from './services/supabase';
 
+const getTabFromHash = () => {
+  if (typeof window === 'undefined') return TABS.LIVE;
+  const hash = window.location.hash.replace(/^#\/?/, '').toLowerCase();
+  if (hash === 'members' || hash === 'member') return TABS.MEMBERS;
+  if (hash === 'recordings' || hash === 'arsip' || hash === 'rekaman') return TABS.RECORDINGS;
+  if (hash === 'settings' || hash === 'pengaturan') return TABS.SETTINGS;
+  return TABS.LIVE;
+};
+
 export default function App() {
-  const [currentTab, setCurrentTab] = useState(TABS.LIVE);
+  const [currentTab, setCurrentTab] = useState(getTabFromHash);
   const [loading, setLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [isConnected, setIsConnected] = useState(false);
+
+  useEffect(() => {
+    const handleHash = () => {
+      setCurrentTab(getTabFromHash());
+    };
+    window.addEventListener('hashchange', handleHash);
+    return () => window.removeEventListener('hashchange', handleHash);
+  }, []);
+
+  const handleTabChange = (newTab) => {
+    setCurrentTab(newTab);
+    try {
+      window.location.hash = newTab;
+    } catch (_) {}
+  };
 
   // Core Data State
   const [members, setMembers] = useState([]);
@@ -261,7 +285,7 @@ export default function App() {
   ).length;
 
   return (
-    <div className="min-h-screen bg-dark-bg text-slate-100 flex flex-col selection:bg-rose-500 selection:text-white">
+    <div className="min-h-screen bg-slate-50 text-slate-900 flex flex-col selection:bg-rose-500 selection:text-white">
       {/* Top Mobile Header */}
       <Header
         isConnected={isConnected}
@@ -322,7 +346,7 @@ export default function App() {
       {/* Bottom Navigation Bar */}
       <BottomNav
         currentTab={currentTab}
-        onTabChange={setCurrentTab}
+        onTabChange={handleTabChange}
         liveCount={activeLives.length}
         activeRecCount={activeRecCount}
       />

@@ -1,6 +1,7 @@
 import {
   getSupabaseClient,
   triggerGitHubRecorder,
+  stopGitHubRecorder,
   sendTelegramNotification,
   sendDeviceNotification,
 } from './supabase';
@@ -694,6 +695,11 @@ export async function getRecordings() {
 // Stop / complete a recording
 export async function finishRecording(recordingId) {
   const supabase = getSupabaseClient();
+
+  // Trigger stop on Cloudflare Worker / GitHub Actions proxy
+  stopGitHubRecorder({ recording_id: recordingId }).catch((e) =>
+    console.warn('stopGitHubRecorder note:', e)
+  );
 
   const recs = getLocalData(LOCAL_STORAGE_RECORDINGS, INITIAL_RECORDINGS);
   const updatedRecs = recs.map((r) =>

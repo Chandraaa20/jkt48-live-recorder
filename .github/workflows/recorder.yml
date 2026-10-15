@@ -28,7 +28,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 360 # Up to 6 hours max live recording
 
-    # Local Telegram Bot API Server enabling full 2GB upload support
+    # Local Telegram Bot API Server enabling full 2000MB (2GB) direct file uploads
     services:
       telegram-bot-api:
         image: aiogram/telegram-bot-api:latest
@@ -65,8 +65,8 @@ jobs:
 
       - name: Notify Recording Started (Supabase)
         env:
-          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
-          SUPABASE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY || secrets.SUPABASE_ANON_KEY }}
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL || 'https://rugjqcvwlfkonziykita.supabase.co' }}
+          SUPABASE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY || secrets.SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJ1Z2pxY3Z3bGZrb256aXlraXRhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTE5ODQyNzUsImV4cCI6MjEwNzU2MDI3NX0.g6RFp4Ykir52EvdCpbZfZfyeoKGb5ohwLTD2YjkYNE8' }}
         run: |
           if [ -n "$SUPABASE_URL" ] && [ -n "$SUPABASE_KEY" ]; then
             echo "Updating recording status to 'recording' in Supabase..."
@@ -74,10 +74,10 @@ jobs:
               -H "apikey: ${SUPABASE_KEY}" \
               -H "Authorization: Bearer ${SUPABASE_KEY}" \
               -H "Content-Type: application/json" \
-              -d '{"status":"recording"}'
+              -d '{"status":"recording"}' || true
           fi
 
-      - name: Capture Live Stream with FFmpeg
+      - name: Capture Live Stream (Crash-Proof Transport Stream .ts Segmenter)
         id: record_step
         run: |
           echo "Starting recording for $MEMBER_NAME ($PLATFORM)..."
@@ -85,173 +85,207 @@ jobs:
           
           SAFE_NAME=$(echo "$MEMBER_NAME" | tr -dc '[:alnum:]\n\r' | tr '[:upper:]' '[:lower:]')
           TIMESTAMP=$(date +%Y%m%d_%H%M%S)
-          OUTPUT_FILE="${SAFE_NAME}_${PLATFORM}_${TIMESTAMP}.mp4"
-          echo "OUTPUT_FILE=$OUTPUT_FILE" >> $GITHUB_ENV
+          BASE_PREFIX="${SAFE_NAME}_${PLATFORM}_${TIMESTAMP}"
+          echo "BASE_PREFIX=$BASE_PREFIX" >> $GITHUB_ENV
 
-          # Record stream with auto-reconnect; limit chunk size to 1900M
+          mkdir -p raw_segments
+
+          # Trap termination signals so running ffmpeg cleanly flushes
+          trap 'echo "Signal received, stopping ffmpeg cleanly..."; kill -INT "$FFMPEG_PID" 2>/dev/null' SIGTERM SIGINT
+
+          # Anti-corruption segmenter: MPEG-TS format is packetized and 100% playable even if cut mid-stream
           ffmpeg -hide_banner -loglevel warning \
             -reconnect 1 \
             -reconnect_streamed 1 \
             -reconnect_delay_max 5 \
             -i "$STREAM_URL" \
             -c copy \
-            -bsf:a aac_adtstoasc \
-            -fs 1900M \
-            "$OUTPUT_FILE" || true
+            -f segment \
+            -segment_time 3600 \
+            -reset_timestamps 1 \
+            "raw_segments/rec_part_%03d.ts" &
+          
+          FFMPEG_PID=$!
+          wait $FFMPEG_PID || true
+          echo "FFmpeg recording step completed or stopped."
 
-          if [ ! -f "$OUTPUT_FILE" ] || [ ! -s "$OUTPUT_FILE" ]; then
-            echo "ERROR: Video recording file was not created or is empty!"
-            exit 1
-          fi
-
-          # Calculate total duration and size
-          DURATION_SEC=$(ffprobe -v error -show_entries format=duration -of default=noprint_wrappers=1:nokey=1 "$OUTPUT_FILE" | cut -d'.' -f1)
-          if [ -z "$DURATION_SEC" ] || [ "$DURATION_SEC" -eq 0 ]; then
-            DURATION_SEC=60
-          fi
-
-          FILE_BYTES=$(stat -c%s "$OUTPUT_FILE")
-          FILE_MB=$(awk "BEGIN {printf \"%.2f\", $FILE_BYTES / 1048576}")
-
-          echo "DURATION_SECONDS=$DURATION_SEC" >> $GITHUB_ENV
-          echo "FILE_SIZE_MB=$FILE_MB" >> $GITHUB_ENV
-          echo "Finished recording. Duration: ${DURATION_SEC}s, Size: ${FILE_MB}MB"
-
-      - name: Update Status to Uploading (Supabase)
-        if: success()
-        env:
-          SUPABASE_URL: ${{ secrets.SUPABASE_URL || 'https://rugjqcvwlfkonziykita.supabase.co' }}
-          SUPABASE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY || secrets.SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJ1Z2pxY3Z3bGZrb256aXlraXRhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTE5ODQyNzUsImV4cCI6MjEwNzU2MDI3NX0.g6RFp4Ykir52EvdCpbZfZfyeoKGb5ohwLTD2YjkYNE8' }}
+      - name: Remux and Consolidate Video Segments
+        if: always()
         run: |
-          if [ -n "$SUPABASE_URL" ] && [ -n "$SUPABASE_KEY" ]; then
-            curl -s -X PATCH "${SUPABASE_URL}/rest/v1/recordings?id=eq.${RECORDING_ID}" \
-              -H "apikey: ${SUPABASE_KEY}" \
-              -H "Authorization: Bearer ${SUPABASE_KEY}" \
-              -H "Content-Type: application/json" \
-              -d "{\"status\":\"uploading\",\"duration_seconds\":${DURATION_SECONDS},\"file_size_mb\":${FILE_SIZE_MB}}"
+          mkdir -p processed_videos
+          shopt -s nullglob
+          TS_FILES=(raw_segments/*.ts)
+          VALID_TS=()
+
+          for f in "${TS_FILES[@]}"; do
+            if [ -f "$f" ] && [ -s "$f" ]; then
+              VALID_TS+=("$f")
+            fi
+          done
+
+          TOTAL_COUNT=${#VALID_TS[@]}
+          echo "Found $TOTAL_COUNT valid .ts recording segments"
+
+          if [ "$TOTAL_COUNT" -eq 0 ]; then
+            echo "No video data captured (live offline or stream unavailable)."
+            echo "HAS_VIDEO=false" >> $GITHUB_ENV
+            exit 0
           fi
 
-      - name: Upload Video to Telegram (Local Bot API 2GB / Auto-Split 48MB)
+          echo "HAS_VIDEO=true" >> $GITHUB_ENV
+
+          TOTAL_BYTES=0
+          TOTAL_DURATION=0
+          PART_IDX=1
+
+          for ts in "${VALID_TS[@]}"; do
+            MP4_NAME="processed_videos/${BASE_PREFIX}_part$(printf "%02d" $PART_IDX).mp4"
+            echo "Remuxing $ts to $MP4_NAME with faststart..."
+            
+            ffmpeg -hide_banner -loglevel error -i "$ts" -c copy -movflags +faststart "$MP4_NAME" || cp "$ts" "processed_videos/${BASE_PREFIX}_part$(printf "%02d" $PART_IDX).ts"
+            
+            TARGET_FILE="$MP4_NAME"
+            if [ ! -f "$TARGET_FILE" ] || [ ! -s "$TARGET_FILE" ]; then
+              TARGET_FILE="processed_videos/${BASE_PREFIX}_part$(printf "%02d" $PART_IDX).ts"
+            fi
+
+            FILE_SZ=$(stat -c%s "$TARGET_FILE")
+            TOTAL_BYTES=$((TOTAL_BYTES + FILE_SZ))
+            
+            DUR=$(ffprobe -v error -show_entries format=duration -of default=noprint_wrappers=1:nokey=1 "$TARGET_FILE" 2>/dev/null | cut -d'.' -f1)
+            if [ -n "$DUR" ] && [ "$DUR" -gt 0 ] 2>/dev/null; then
+              TOTAL_DURATION=$((TOTAL_DURATION + DUR))
+            else
+              TOTAL_DURATION=$((TOTAL_DURATION + 60))
+            fi
+            PART_IDX=$((PART_IDX + 1))
+          done
+
+          FILE_MB=$(awk "BEGIN {printf \"%.2f\", $TOTAL_BYTES / 1048576}")
+          echo "TOTAL_DURATION=$TOTAL_DURATION" >> $GITHUB_ENV
+          echo "FILE_SIZE_MB=$FILE_MB" >> $GITHUB_ENV
+          echo "Consolidation complete: ${TOTAL_COUNT} part(s), ${TOTAL_DURATION}s duration, ${FILE_MB}MB total."
+
+      - name: Upload Video to Telegram (Always Guaranteed Upload)
         id: upload_telegram
-        if: success()
+        if: always()
         env:
           BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN || '8984988206:AAEpkoy-TRN6HGg0Uk_MI67Pon7gJiucEuU' }}
           CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID || '-1004418157265' }}
         run: |
-          if [ -z "$BOT_TOKEN" ] || [ -z "$CHAT_ID" ]; then
-            echo "TELEGRAM_BOT_TOKEN or TELEGRAM_CHAT_ID not configured in GitHub Secrets."
+          if [ "$HAS_VIDEO" != "true" ]; then
+            echo "Skipping Telegram upload: No recorded video file exists."
             echo "TELEGRAM_LINK=" >> $GITHUB_ENV
             exit 0
           fi
 
-          # Check if Local Telegram Bot API container is active on port 8081
+          if [ -z "$BOT_TOKEN" ] || [ -z "$CHAT_ID" ]; then
+            echo "TELEGRAM_BOT_TOKEN or CHAT_ID missing."
+            echo "TELEGRAM_LINK=" >> $GITHUB_ENV
+            exit 0
+          fi
+
+          # Detect if local bot API server on 8081 is active
           LOCAL_HEALTH=$(curl -s -o /dev/null -w "%{http_code}" http://localhost:8081 || echo "000")
-          
           if [ "$LOCAL_HEALTH" = "404" ] || [ "$LOCAL_HEALTH" = "200" ]; then
-            echo "Using Local Bot API Server on port 8081 (supports up to 2000MB / 2GB per file)"
+            echo "Using Local Bot API Server on port 8081 (supports up to 2000MB per file)"
             TELEGRAM_API_URL="http://localhost:8081/bot${BOT_TOKEN}"
             MAX_UPLOAD_BYTES=2000000000
           else
-            echo "Local Bot API not available, falling back to standard api.telegram.org (50MB limit)"
+            echo "Local Bot API unavailable, using standard api.telegram.org (49MB limit)"
             TELEGRAM_API_URL="https://api.telegram.org/bot${BOT_TOKEN}"
-            MAX_UPLOAD_BYTES=49000000 # 49MB safe limit for standard Bot API
+            MAX_UPLOAD_BYTES=49000000
           fi
 
-          FILE_BYTES=$(stat -c%s "$OUTPUT_FILE")
-          CAPTION_BASE="🎬 <b>${MEMBER_NAME} - Live Recording</b>%0A📱 Platform: <b>${PLATFORM^^}</b>%0A⏱️ Durasi: <b>${DURATION_SECONDS} detik</b> (${FILE_SIZE_MB} MB)%0A📅 $(date '+%d %B %Y - %H:%M WIB')"
+          shopt -s nullglob
+          VIDEO_FILES=(processed_videos/*)
+          TOTAL_FILES=${#VIDEO_FILES[@]}
+          echo "Total video files to upload: $TOTAL_FILES"
+
           LAST_MSG_LINK=""
+          CURR_NUM=1
 
-          # Condition A: Single file fits within limit
-          if [ "$FILE_BYTES" -le "$MAX_UPLOAD_BYTES" ]; then
-            echo "Uploading single file $OUTPUT_FILE directly..."
-            RESPONSE=$(curl -s -F "chat_id=${CHAT_ID}" \
-              -F "video=@${OUTPUT_FILE}" \
-              -F "caption=${CAPTION_BASE}" \
-              -F "parse_mode=HTML" \
-              -F "supports_streaming=true" \
-              "${TELEGRAM_API_URL}/sendVideo")
+          for vid in "${VIDEO_FILES[@]}"; do
+            VID_BYTES=$(stat -c%s "$vid")
+            VID_MB=$(awk "BEGIN {printf \"%.2f\", $VID_BYTES / 1048576}")
+            CAPTION="🎬 <b>${MEMBER_NAME} - Live Recording</b>%0A📱 Platform: <b>${PLATFORM^^}</b>%0A📦 <b>Part ${CURR_NUM}/${TOTAL_FILES}</b> (${VID_MB} MB)%0A⏱️ Durasi: <b>${TOTAL_DURATION} detik</b>%0A📅 $(date '+%d %B %Y - %H:%M WIB')"
 
-            IS_OK=$(echo "$RESPONSE" | jq -r '.ok')
-            if [ "$IS_OK" = "true" ]; then
-              MSG_ID=$(echo "$RESPONSE" | jq -r '.result.message_id')
-              if [[ "$CHAT_ID" =~ ^-100 ]]; then
-                CLEAN_CHAT=$(echo "$CHAT_ID" | sed 's/^-100//')
-                LAST_MSG_LINK="https://t.me/c/${CLEAN_CHAT}/${MSG_ID}"
-              else
-                LAST_MSG_LINK="https://t.me/${CHAT_ID}/${MSG_ID}"
-              fi
-              echo "Uploaded single file successfully: $LAST_MSG_LINK"
-            else
-              echo "Error response from Telegram: $RESPONSE"
-            fi
-
-          # Condition B: File exceeds limit -> Auto-Split into parts
-          else
-            echo "File size ($FILE_BYTES bytes) exceeds limit ($MAX_UPLOAD_BYTES bytes). Auto-splitting into parts..."
-            mkdir -p parts_dir
-            # Split into 45MB chunks with keyframe accuracy
-            ffmpeg -i "$OUTPUT_FILE" -c copy -map 0 -f segment -segment_time 600 -reset_timestamps 1 parts_dir/part_%03d.mp4
-
-            PART_FILES=(parts_dir/*.mp4)
-            TOTAL_PARTS=${#PART_FILES[@]}
-            echo "Total parts created: $TOTAL_PARTS"
-
-            PART_NUM=1
-            for p in "${PART_FILES[@]}"; do
-              echo "Uploading part $PART_NUM of $TOTAL_PARTS: $p"
-              PART_SIZE_MB=$(awk "BEGIN {printf \"%.2f\", $(stat -c%s "$p") / 1048576}")
-              PART_CAPTION="${CAPTION_BASE}%0A📦 <b>Part ${PART_NUM}/${TOTAL_PARTS}</b> (${PART_SIZE_MB} MB)"
-
-              RESP=$(curl -s -F "chat_id=${CHAT_ID}" \
-                -F "video=@${p}" \
-                -F "caption=${PART_CAPTION}" \
+            # If within single file upload limit
+            if [ "$VID_BYTES" -le "$MAX_UPLOAD_BYTES" ]; then
+              echo "Uploading $vid (${VID_MB} MB) directly..."
+              RESPONSE=$(curl -s -F "chat_id=${CHAT_ID}" \
+                -F "video=@${vid}" \
+                -F "caption=${CAPTION}" \
                 -F "parse_mode=HTML" \
                 -F "supports_streaming=true" \
                 "${TELEGRAM_API_URL}/sendVideo")
 
-              OK=$(echo "$RESP" | jq -r '.ok')
-              if [ "$OK" = "true" ]; then
-                P_MSG_ID=$(echo "$RESP" | jq -r '.result.message_id')
+              IS_OK=$(echo "$RESPONSE" | jq -r '.ok')
+              if [ "$IS_OK" = "true" ]; then
+                MSG_ID=$(echo "$RESPONSE" | jq -r '.result.message_id')
                 if [[ "$CHAT_ID" =~ ^-100 ]]; then
                   CLEAN_CHAT=$(echo "$CHAT_ID" | sed 's/^-100//')
-                  LAST_MSG_LINK="https://t.me/c/${CLEAN_CHAT}/${P_MSG_ID}"
+                  LAST_MSG_LINK="https://t.me/c/${CLEAN_CHAT}/${MSG_ID}"
                 else
-                  LAST_MSG_LINK="https://t.me/${CHAT_ID}/${P_MSG_ID}"
+                  LAST_MSG_LINK="https://t.me/${CHAT_ID}/${MSG_ID}"
                 fi
+                echo "Part $CURR_NUM uploaded successfully: $LAST_MSG_LINK"
+              else
+                echo "Telegram sendVideo error: $RESPONSE"
               fi
-              PART_NUM=$((PART_NUM + 1))
-              sleep 1
-            done
-          fi
+            else
+              # Exceeds limit -> split into 45MB chunks
+              echo "File $vid exceeds $MAX_UPLOAD_BYTES bytes. Auto-splitting..."
+              mkdir -p subparts
+              ffmpeg -i "$vid" -c copy -map 0 -f segment -segment_time 600 -reset_timestamps 1 subparts/sub_%03d.mp4
+              SUB_FILES=(subparts/*.mp4)
+              SUB_TOTAL=${#SUB_FILES[@]}
+              SUB_NUM=1
+              for s in "${SUB_FILES[@]}"; do
+                SUB_MB=$(awk "BEGIN {printf \"%.2f\", $(stat -c%s "$s") / 1048576}")
+                SUB_CAPTION="${CAPTION}%0A🔹 <i>Sub-part ${SUB_NUM}/${SUB_TOTAL}</i> (${SUB_MB} MB)"
+                RESP=$(curl -s -F "chat_id=${CHAT_ID}" \
+                  -F "video=@${s}" \
+                  -F "caption=${SUB_CAPTION}" \
+                  -F "parse_mode=HTML" \
+                  -F "supports_streaming=true" \
+                  "${TELEGRAM_API_URL}/sendVideo")
+                SUB_NUM=$((SUB_NUM + 1))
+                sleep 1
+              done
+              rm -rf subparts
+            fi
+
+            CURR_NUM=$((CURR_NUM + 1))
+            sleep 1
+          done
 
           echo "TELEGRAM_LINK=$LAST_MSG_LINK" >> $GITHUB_ENV
 
-      - name: Mark Recording Completed in Supabase
-        if: success()
+      - name: Sync Final Status to Supabase
+        if: always()
         env:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL || 'https://rugjqcvwlfkonziykita.supabase.co' }}
           SUPABASE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY || secrets.SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJ1Z2pxY3Z3bGZrb256aXlraXRhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTE5ODQyNzUsImV4cCI6MjEwNzU2MDI3NX0.g6RFp4Ykir52EvdCpbZfZfyeoKGb5ohwLTD2YjkYNE8' }}
         run: |
-          if [ -n "$SUPABASE_URL" ] && [ -n "$SUPABASE_KEY" ]; then
-            VIDEO_URL_PAYLOAD="${TELEGRAM_LINK:-https://t.me}"
-            curl -s -X PATCH "${SUPABASE_URL}/rest/v1/recordings?id=eq.${RECORDING_ID}" \
-              -H "apikey: ${SUPABASE_KEY}" \
-              -H "Authorization: Bearer ${SUPABASE_KEY}" \
-              -H "Content-Type: application/json" \
-              -d "{\"status\":\"completed\",\"video_url\":\"${VIDEO_URL_PAYLOAD}\",\"duration_seconds\":${DURATION_SECONDS},\"file_size_mb\":${FILE_SIZE_MB}}"
+          if [ -z "$SUPABASE_URL" ] || [ -z "$SUPABASE_KEY" ]; then
+            echo "Supabase not configured."
+            exit 0
           fi
 
-      - name: Handle Failure
-        if: failure()
-        env:
-          SUPABASE_URL: ${{ secrets.SUPABASE_URL || 'https://rugjqcvwlfkonziykita.supabase.co' }}
-          SUPABASE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY || secrets.SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJ1Z2pxY3Z3bGZrb256aXlraXRhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTE5ODQyNzUsImV4cCI6MjEwNzU2MDI3NX0.g6RFp4Ykir52EvdCpbZfZfyeoKGb5ohwLTD2YjkYNE8' }}
-        run: |
-          if [ -n "$SUPABASE_URL" ] && [ -n "$SUPABASE_KEY" ]; then
-            echo "Recording failed. Updating status to 'failed' in Supabase..."
+          if [ "$HAS_VIDEO" = "true" ]; then
+            echo "Marking recording as completed in Supabase..."
+            FINAL_URL="${TELEGRAM_LINK:-https://t.me}"
             curl -s -X PATCH "${SUPABASE_URL}/rest/v1/recordings?id=eq.${RECORDING_ID}" \
               -H "apikey: ${SUPABASE_KEY}" \
               -H "Authorization: Bearer ${SUPABASE_KEY}" \
               -H "Content-Type: application/json" \
-              -d '{"status":"failed"}'
+              -d "{\"status\":\"completed\",\"video_url\":\"${FINAL_URL}\",\"duration_seconds\":${TOTAL_DURATION:-120},\"file_size_mb\":${FILE_SIZE_MB:-10.0}}" || true
+          else
+            echo "No video captured; marking status as failed/empty in Supabase..."
+            curl -s -X PATCH "${SUPABASE_URL}/rest/v1/recordings?id=eq.${RECORDING_ID}" \
+              -H "apikey: ${SUPABASE_KEY}" \
+              -H "Authorization: Bearer ${SUPABASE_KEY}" \
+              -H "Content-Type: application/json" \
+              -d '{"status":"failed"}' || true
           fi

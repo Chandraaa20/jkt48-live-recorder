@@ -278,6 +278,15 @@ class SupabaseWorkerClient {
       body: JSON.stringify(data),
     });
   }
+
+  async updateRecordingStatus(id, status, videoUrl = null) {
+    const payload = { status };
+    if (videoUrl) payload.video_url = videoUrl;
+    return this.request(`recordings?id=eq.${id}`, {
+      method: 'PATCH',
+      body: JSON.stringify(payload),
+    });
+  }
 }
 
 // ==============================================================================
@@ -505,7 +514,7 @@ export async function processLiveStreams(env) {
 // ==============================================================================
 
 export default {
-  // HTTP Endpoint (Manual Trigger / Health Check from Web App)
+  // HTTP Endpoint (Manual Trigger / Proxy / Health Check from Web App)
   async fetch(request, env, ctx) {
     const corsHeaders = {
       'Access-Control-Allow-Origin': '*',
@@ -517,7 +526,118 @@ export default {
       return new Response(null, { headers: corsHeaders });
     }
 
+    const url = new URL(request.url);
+    const pathname = url.pathname;
+
     try {
+      // 1. POST /api/trigger-record: Secure server-side GitHub dispatch
+      if (request.method === 'POST' && pathname === '/api/trigger-record') {
+        const body = await request.json().catch(() => ({}));
+        const recordingId = body.recording_id || crypto.randomUUID();
+        const memberName = body.member_name || 'Member JKT48';
+        const platform = body.platform || 'idn';
+        const streamUrl = body.stream_url || '';
+
+        if (!env.GITHUB_TOKEN) {
+          return new Response(
+            JSON.stringify({
+              success: false,
+              message: 'Server Secret GITHUB_TOKEN belum dikonfigurasi di Cloudflare Worker.',
+            }),
+            { status: 500, headers: { 'Content-Type': 'application/json', ...corsHeaders } }
+          );
+        }
+
+        const repo = env.GITHUB_REPO || 'Chandraaa20/jkt48-live-recorder';
+        const ghRes = await fetch(`https://api.github.com/repos/${repo}/dispatches`, {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${env.GITHUB_TOKEN}`,
+            'Accept': 'application/vnd.github.v3+json',
+            'User-Agent': 'JKT48-Cloudflare-Worker/1.0',
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            event_type: 'start_recording',
+            client_payload: {
+              recording_id: recordingId,
+              member_name: memberName,
+              platform: platform,
+              stream_url: streamUrl,
+            },
+          }),
+        });
+
+        if (!ghRes.ok) {
+          const errText = await ghRes.text();
+          return new Response(
+            JSON.stringify({
+              success: false,
+              message: `GitHub Actions dispatch failed [${ghRes.status}]: ${errText}`,
+            }),
+            { status: 502, headers: { 'Content-Type': 'application/json', ...corsHeaders } }
+          );
+        }
+
+        // Also update active_lives if live_id provided
+        if (body.live_id && env.SUPABASE_URL && (env.SUPABASE_SERVICE_ROLE_KEY || env.SUPABASE_ANON_KEY)) {
+          const supabase = new SupabaseWorkerClient(
+            env.SUPABASE_URL,
+            env.SUPABASE_SERVICE_ROLE_KEY || env.SUPABASE_ANON_KEY
+          );
+          await supabase.updateActiveLive(body.live_id, { is_recording: true }).catch(() => null);
+        }
+
+        return new Response(
+          JSON.stringify({
+            success: true,
+            recording_id: recordingId,
+            message: 'Perekaman cloud berhasil dipicu melalui Cloudflare Worker Proxy!',
+          }),
+          { status: 200, headers: { 'Content-Type': 'application/json', ...corsHeaders } }
+        );
+      }
+
+      // 2. POST /api/stop-record: Stop recording and/or cancel runner
+      if (request.method === 'POST' && pathname === '/api/stop-record') {
+        const body = await request.json().catch(() => ({}));
+        const recordingId = body.recording_id;
+        const runId = body.run_id;
+
+        const repo = env.GITHUB_REPO || 'Chandraaa20/jkt48-live-recorder';
+
+        // Cancel workflow run on GitHub Actions if runId is supplied
+        if (runId && env.GITHUB_TOKEN) {
+          await fetch(`https://api.github.com/repos/${repo}/actions/runs/${runId}/cancel`, {
+            method: 'POST',
+            headers: {
+              'Authorization': `Bearer ${env.GITHUB_TOKEN}`,
+              'Accept': 'application/vnd.github.v3+json',
+              'User-Agent': 'JKT48-Cloudflare-Worker/1.0',
+            },
+          }).catch(() => null);
+        }
+
+        // Mark completed in Supabase
+        if (recordingId && env.SUPABASE_URL && (env.SUPABASE_SERVICE_ROLE_KEY || env.SUPABASE_ANON_KEY)) {
+          const supabase = new SupabaseWorkerClient(
+            env.SUPABASE_URL,
+            env.SUPABASE_SERVICE_ROLE_KEY || env.SUPABASE_ANON_KEY
+          );
+          await supabase.updateRecordingStatus(recordingId, 'completed').catch(() => null);
+        }
+
+        return new Response(
+          JSON.stringify({
+            success: true,
+            recording_id: recordingId,
+            message: 'Rekaman berhasil dihentikan.',
+          }),
+          { status: 200, headers: { 'Content-Type': 'application/json', ...corsHeaders } }
+        );
+      }
+
+      // 3. Default: Process Live Streams & Return Health Status
       const result = await processLiveStreams(env);
       return new Response(JSON.stringify(result, null, 2), {
         status: 200,

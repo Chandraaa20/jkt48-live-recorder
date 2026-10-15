@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { X, Plus, Trash2, Save, User, ShieldCheck, Bell, Video } from './Icons';
+import { X, Plus, Trash2, Save, User, Video, Bell } from './Icons';
 
 const AVAILABLE_PLATFORMS = [
   { id: 'idn', label: 'IDN Live', placeholderId: 'Contoh: jkt48_freya' },
@@ -114,29 +114,29 @@ export default function MemberModal({ isOpen, onClose, onSave, memberToEdit = nu
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/80 backdrop-blur-sm overflow-y-auto">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-900/60 backdrop-blur-sm overflow-y-auto">
       <div 
-        className="w-full max-w-lg bg-dark-card border border-dark-border rounded-2xl shadow-2xl overflow-hidden my-auto animate-in fade-in zoom-in-95 duration-150"
+        className="w-full max-w-lg bg-white border border-slate-200/90 rounded-2xl shadow-2xl overflow-hidden my-auto animate-in fade-in zoom-in-95 duration-150"
         role="dialog"
       >
         {/* Header */}
-        <div className="px-5 py-4 border-b border-dark-border bg-dark-bg/60 flex items-center justify-between">
-          <div className="flex items-center space-x-2">
-            <div className="p-2 rounded-lg bg-rose-500/10 text-rose-400 border border-rose-500/20">
+        <div className="px-5 py-4 border-b border-slate-200/80 bg-slate-50 flex items-center justify-between">
+          <div className="flex items-center space-x-2.5">
+            <div className="p-2 rounded-xl bg-rose-50 text-rose-700 border border-rose-200">
               <User className="w-4 h-4" />
             </div>
             <div>
-              <h2 className="text-base font-bold text-white">
+              <h2 className="text-base font-bold text-slate-900">
                 {memberToEdit ? 'Edit Member JKT48' : 'Tambah Member JKT48'}
               </h2>
-              <p className="text-xs text-dark-muted">
+              <p className="text-xs text-slate-500 font-medium">
                 Atur info profil & akun platform live
               </p>
             </div>
           </div>
           <button
             onClick={onClose}
-            className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-dark-hover transition-colors"
+            className="min-h-[44px] min-w-[44px] flex items-center justify-center rounded-xl text-slate-400 hover:text-slate-800 hover:bg-slate-200/60 transition-colors"
           >
             <X className="w-5 h-5" />
           </button>
@@ -145,7 +145,7 @@ export default function MemberModal({ isOpen, onClose, onSave, memberToEdit = nu
         {/* Form Body */}
         <form onSubmit={handleSubmit} className="p-5 space-y-4 max-h-[75vh] overflow-y-auto">
           {error && (
-            <div className="p-3 rounded-lg bg-rose-500/10 border border-rose-500/30 text-rose-400 text-xs font-medium">
+            <div className="p-3 rounded-xl bg-rose-50 border border-rose-200 text-rose-800 text-xs font-semibold">
               {error}
             </div>
           )}
@@ -153,8 +153,8 @@ export default function MemberModal({ isOpen, onClose, onSave, memberToEdit = nu
           {/* Nama Lengkap & Panggilan */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
-              <label className="block text-xs font-semibold text-slate-300 mb-1">
-                Nama Lengkap <span className="text-rose-500">*</span>
+              <label className="block text-xs font-semibold text-slate-700 mb-1">
+                Nama Lengkap <span className="text-rose-600">*</span>
               </label>
               <input
                 type="text"
@@ -162,12 +162,12 @@ export default function MemberModal({ isOpen, onClose, onSave, memberToEdit = nu
                 onChange={(e) => setName(e.target.value)}
                 placeholder="Contoh: Freya Jayawardana"
                 required
-                className="w-full px-3 py-2 rounded-xl bg-dark-bg border border-dark-border text-sm text-white placeholder-slate-500 focus:outline-none focus:border-rose-500"
+                className="w-full min-h-[42px] px-3.5 py-2 rounded-xl bg-slate-50 border border-slate-200/90 text-sm text-slate-900 placeholder-slate-400 focus:outline-none focus:border-rose-500 focus:bg-white transition-all"
               />
             </div>
 
             <div>
-              <label className="block text-xs font-semibold text-slate-300 mb-1">
+              <label className="block text-xs font-semibold text-slate-700 mb-1">
                 Nama Panggilan
               </label>
               <input
@@ -175,7 +175,7 @@ export default function MemberModal({ isOpen, onClose, onSave, memberToEdit = nu
                 value={nickname}
                 onChange={(e) => setNickname(e.target.value)}
                 placeholder="Contoh: Freya"
-                className="w-full px-3 py-2 rounded-xl bg-dark-bg border border-dark-border text-sm text-white placeholder-slate-500 focus:outline-none focus:border-rose-500"
+                className="w-full min-h-[42px] px-3.5 py-2 rounded-xl bg-slate-50 border border-slate-200/90 text-sm text-slate-900 placeholder-slate-400 focus:outline-none focus:border-rose-500 focus:bg-white transition-all"
               />
             </div>
           </div>
@@ -183,7 +183,7 @@ export default function MemberModal({ isOpen, onClose, onSave, memberToEdit = nu
           {/* Generasi & Avatar URL */}
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
             <div>
-              <label className="block text-xs font-semibold text-slate-300 mb-1">
+              <label className="block text-xs font-semibold text-slate-700 mb-1">
                 Generasi (1-13)
               </label>
               <input
@@ -192,12 +192,12 @@ export default function MemberModal({ isOpen, onClose, onSave, memberToEdit = nu
                 max="15"
                 value={generation}
                 onChange={(e) => setGeneration(e.target.value)}
-                className="w-full px-3 py-2 rounded-xl bg-dark-bg border border-dark-border text-sm text-white focus:outline-none focus:border-rose-500"
+                className="w-full min-h-[42px] px-3.5 py-2 rounded-xl bg-slate-50 border border-slate-200/90 text-sm text-slate-900 focus:outline-none focus:border-rose-500 focus:bg-white transition-all"
               />
             </div>
 
             <div className="sm:col-span-2">
-              <label className="block text-xs font-semibold text-slate-300 mb-1">
+              <label className="block text-xs font-semibold text-slate-700 mb-1">
                 URL Foto Avatar
               </label>
               <input
@@ -205,21 +205,23 @@ export default function MemberModal({ isOpen, onClose, onSave, memberToEdit = nu
                 value={avatarUrl}
                 onChange={(e) => setAvatarUrl(e.target.value)}
                 placeholder="https://..."
-                className="w-full px-3 py-2 rounded-xl bg-dark-bg border border-dark-border text-sm text-white placeholder-slate-500 focus:outline-none focus:border-rose-500 truncate"
+                className="w-full min-h-[42px] px-3.5 py-2 rounded-xl bg-slate-50 border border-slate-200/90 text-sm text-slate-900 placeholder-slate-400 focus:outline-none focus:border-rose-500 focus:bg-white truncate transition-all"
               />
             </div>
           </div>
 
           {/* Saklar Konfigurasi Otomatis (Auto-Record & Notifikasi) */}
-          <div className="p-3.5 rounded-xl bg-dark-bg border border-dark-border space-y-3">
+          <div className="p-4 rounded-xl bg-slate-50 border border-slate-200/80 space-y-3">
             <div className="flex items-center justify-between">
-              <div className="flex items-center space-x-2">
-                <Video className="w-4 h-4 text-rose-400" />
+              <div className="flex items-center space-x-2.5">
+                <div className="p-1.5 rounded-lg bg-rose-50 text-rose-700 border border-rose-200">
+                  <Video className="w-4 h-4" />
+                </div>
                 <div>
-                  <span className="text-xs font-bold text-white block">
+                  <span className="text-xs font-bold text-slate-900 block">
                     Perekaman Otomatis Cloud (is_auto_record)
                   </span>
-                  <span className="text-[11px] text-dark-muted">
+                  <span className="text-[11px] text-slate-500">
                     Rekam live stream ke cloud otomatis saat member mulai live
                   </span>
                 </div>
@@ -228,7 +230,7 @@ export default function MemberModal({ isOpen, onClose, onSave, memberToEdit = nu
                 type="button"
                 onClick={() => setIsAutoRecord(!isAutoRecord)}
                 className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${
-                  isAutoRecord ? 'bg-rose-600' : 'bg-slate-700'
+                  isAutoRecord ? 'bg-rose-600' : 'bg-slate-300'
                 }`}
               >
                 <span
@@ -239,15 +241,17 @@ export default function MemberModal({ isOpen, onClose, onSave, memberToEdit = nu
               </button>
             </div>
 
-            <div className="border-t border-dark-border/60 pt-2 flex items-center justify-between">
-              <div className="flex items-center space-x-2">
-                <Bell className="w-4 h-4 text-amber-400" />
+            <div className="border-t border-slate-200/80 pt-3 flex items-center justify-between">
+              <div className="flex items-center space-x-2.5">
+                <div className="p-1.5 rounded-lg bg-emerald-50 text-emerald-700 border border-emerald-200">
+                  <Bell className="w-4 h-4" />
+                </div>
                 <div>
-                  <span className="text-xs font-bold text-white block">
+                  <span className="text-xs font-bold text-slate-900 block">
                     Kirim Notifikasi Live (is_notify)
                   </span>
-                  <span className="text-[11px] text-dark-muted">
-                    Kirim peringatan via FCM/Telegram saat member online
+                  <span className="text-[11px] text-slate-500">
+                    Kirim peringatan via Telegram & Android saat member online
                   </span>
                 </div>
               </div>
@@ -255,7 +259,7 @@ export default function MemberModal({ isOpen, onClose, onSave, memberToEdit = nu
                 type="button"
                 onClick={() => setIsNotify(!isNotify)}
                 className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${
-                  isNotify ? 'bg-emerald-600' : 'bg-slate-700'
+                  isNotify ? 'bg-emerald-600' : 'bg-slate-300'
                 }`}
               >
                 <span
@@ -268,20 +272,20 @@ export default function MemberModal({ isOpen, onClose, onSave, memberToEdit = nu
           </div>
 
           {/* Modular Member Platforms Section */}
-          <div className="space-y-2 pt-2">
+          <div className="space-y-2.5 pt-1">
             <div className="flex items-center justify-between">
               <div>
-                <h3 className="text-xs font-bold text-white tracking-wide uppercase">
+                <h3 className="text-xs font-bold text-slate-900 tracking-wide uppercase">
                   Akun Platform Live (Modular)
                 </h3>
-                <p className="text-[11px] text-dark-muted">
+                <p className="text-[11px] text-slate-500">
                   Dapat ditambah atau disesuaikan untuk platform apa pun
                 </p>
               </div>
               <button
                 type="button"
                 onClick={handleAddPlatform}
-                className="flex items-center space-x-1 px-2.5 py-1 rounded-lg bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 border border-rose-500/30 text-xs font-semibold transition-colors"
+                className="min-h-[38px] flex items-center space-x-1 px-3 py-1.5 rounded-xl bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 text-xs font-bold transition-all shadow-xs"
               >
                 <Plus className="w-3.5 h-3.5" />
                 <span>Tambah Akun</span>
@@ -292,13 +296,13 @@ export default function MemberModal({ isOpen, onClose, onSave, memberToEdit = nu
               {platforms.map((p, idx) => (
                 <div
                   key={idx}
-                  className="p-3 rounded-xl bg-dark-bg/80 border border-dark-border flex flex-col sm:flex-row items-stretch sm:items-center gap-2"
+                  className="p-3.5 rounded-xl bg-slate-50 border border-slate-200/90 flex flex-col sm:flex-row items-stretch sm:items-center gap-2"
                 >
                   {/* Platform selection */}
                   <select
                     value={p.platform}
                     onChange={(e) => handlePlatformChange(idx, 'platform', e.target.value)}
-                    className="px-2.5 py-1.5 rounded-lg bg-dark-card border border-dark-border text-xs text-white font-medium focus:outline-none focus:border-rose-500"
+                    className="min-h-[40px] px-3 py-1.5 rounded-xl bg-white border border-slate-200/90 text-xs text-slate-800 font-semibold focus:outline-none focus:border-rose-500"
                   >
                     {AVAILABLE_PLATFORMS.map((plat) => (
                       <option key={plat.id} value={plat.id}>
@@ -316,18 +320,18 @@ export default function MemberModal({ isOpen, onClose, onSave, memberToEdit = nu
                       placeholder={
                         AVAILABLE_PLATFORMS.find((plat) => plat.id === p.platform)?.placeholderId || 'ID Akun'
                       }
-                      className="w-full px-2.5 py-1.5 rounded-lg bg-dark-card border border-dark-border text-xs text-white placeholder-slate-500 focus:outline-none focus:border-rose-500"
+                      className="w-full min-h-[40px] px-3 py-1.5 rounded-xl bg-white border border-slate-200/90 text-xs text-slate-900 placeholder-slate-400 focus:outline-none focus:border-rose-500"
                     />
                   </div>
 
                   {/* Room URL Key */}
-                  <div className="w-full sm:w-32">
+                  <div className="w-full sm:w-36">
                     <input
                       type="text"
                       value={p.room_url_key || ''}
                       onChange={(e) => handlePlatformChange(idx, 'room_url_key', e.target.value)}
                       placeholder="Room Key / Slug"
-                      className="w-full px-2.5 py-1.5 rounded-lg bg-dark-card border border-dark-border text-xs text-white placeholder-slate-500 focus:outline-none focus:border-rose-500"
+                      className="w-full min-h-[40px] px-3 py-1.5 rounded-xl bg-white border border-slate-200/90 text-xs text-slate-900 placeholder-slate-400 focus:outline-none focus:border-rose-500"
                     />
                   </div>
 
@@ -335,7 +339,7 @@ export default function MemberModal({ isOpen, onClose, onSave, memberToEdit = nu
                   <button
                     type="button"
                     onClick={() => handleRemovePlatform(idx)}
-                    className="p-1.5 text-slate-500 hover:text-rose-400 self-end sm:self-center transition-colors"
+                    className="min-h-[40px] min-w-[40px] flex items-center justify-center p-2 text-slate-400 hover:text-rose-600 rounded-xl hover:bg-rose-50 transition-colors self-end sm:self-center"
                     title="Hapus platform"
                   >
                     <Trash2 className="w-4 h-4" />
@@ -346,18 +350,18 @@ export default function MemberModal({ isOpen, onClose, onSave, memberToEdit = nu
           </div>
 
           {/* Footer Submit */}
-          <div className="pt-3 border-t border-dark-border flex items-center justify-end space-x-2">
+          <div className="pt-3 border-t border-slate-200/80 flex items-center justify-end space-x-2">
             <button
               type="button"
               onClick={onClose}
-              className="px-4 py-2 rounded-xl border border-dark-border text-xs font-semibold text-slate-300 hover:bg-dark-hover transition-colors"
+              className="min-h-[44px] px-4 py-2 rounded-xl border border-slate-200/90 text-xs font-bold text-slate-700 hover:bg-slate-100 transition-colors"
             >
               Batal
             </button>
             <button
               type="submit"
               disabled={isSaving}
-              className="flex items-center space-x-1.5 px-5 py-2 rounded-xl bg-rose-600 hover:bg-rose-500 active:scale-95 text-xs font-bold text-white transition-all shadow-md shadow-rose-950/40 disabled:opacity-50"
+              className="min-h-[44px] flex items-center space-x-1.5 px-5 py-2 rounded-xl bg-rose-600 hover:bg-rose-700 active:scale-95 text-xs font-bold text-white transition-all shadow-md shadow-rose-600/20 disabled:opacity-50"
             >
               <Save className={`w-3.5 h-3.5 ${isSaving ? 'animate-spin' : ''}`} />
               <span>{isSaving ? 'Menyimpan...' : 'Simpan Member'}</span>
