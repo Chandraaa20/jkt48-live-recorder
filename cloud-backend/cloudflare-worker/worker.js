@@ -574,6 +574,9 @@ async function handleHlsProxy(request, env, corsHeaders) {
           'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
           'Referer': referer,
           'Origin': origin,
+          'X-Forwarded-For': '103.28.12.1',
+          'X-Real-IP': '103.28.12.1',
+          'Client-IP': '103.28.12.1',
         },
       });
       if (upstreamRes.ok) break;

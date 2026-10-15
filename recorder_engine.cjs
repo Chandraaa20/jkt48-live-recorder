@@ -34,11 +34,14 @@ async function recordHls({
   const reqHeaders = {
     'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
     'Origin': 'https://www.idn.app',
-    'Referer': 'https://www.idn.app/'
+    'Referer': 'https://www.idn.app/',
+    'X-Forwarded-For': '103.28.12.1',
+    'X-Real-IP': '103.28.12.1',
+    'Client-IP': '103.28.12.1'
   };
 
   let masterRes = null;
-  const urlsToTry = [proxyMasterUrl, streamUrl];
+  const urlsToTry = [streamUrl, proxyMasterUrl];
 
   for (const urlToFetch of urlsToTry) {
     for (let attempt = 1; attempt <= 4; attempt++) {
@@ -113,13 +116,7 @@ async function recordHls({
     }
 
     try {
-      const varRes = await fetch(variantUrl, {
-        headers: {
-          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
-          'Origin': 'https://www.idn.app',
-          'Referer': 'https://www.idn.app/'
-        }
-      });
+      const varRes = await fetch(variantUrl, { headers: reqHeaders });
 
       if (varRes.ok) {
         const varText = await varRes.text();
