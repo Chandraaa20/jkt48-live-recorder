@@ -594,7 +594,7 @@ async function handleHlsProxy(request, env, corsHeaders) {
     }
 
     const contentType = upstreamRes.headers.get('content-type') || '';
-    const isPlaylist = targetUrl.includes('.m3u8') || contentType.includes('mpegurl') || contentType.includes('application/x-mpegURL');
+    const isPlaylist = targetUrl.includes('.m3u8') || targetUrl.includes('playlist.live-video.net') || contentType.includes('mpegurl') || contentType.includes('application/x-mpegURL');
 
     if (isPlaylist) {
       const text = await upstreamRes.text();
@@ -607,14 +607,16 @@ async function handleHlsProxy(request, env, corsHeaders) {
           if (trimmed.includes('URI="')) {
             return trimmed.replace(/URI="([^"]+)"/g, (match, uri) => {
               const absUrl = new URL(uri, baseUrl).toString();
-              const ext = absUrl.includes('.m3u8') ? '/stream.m3u8' : '/segment.ts';
+              const isChild = absUrl.includes('.m3u8') || absUrl.includes('playlist.live-video.net');
+              const ext = isChild ? '/stream.m3u8' : '/segment.ts';
               return `URI="${workerBase}/api/proxy${ext}?url=${encodeURIComponent(absUrl)}"`;
             });
           }
           return line;
         }
         const absUrl = new URL(trimmed, baseUrl).toString();
-        const ext = absUrl.includes('.m3u8') ? '/stream.m3u8' : '/segment.ts';
+        const isChild = absUrl.includes('.m3u8') || absUrl.includes('playlist.live-video.net');
+        const ext = isChild ? '/stream.m3u8' : '/segment.ts';
         return `${workerBase}/api/proxy${ext}?url=${encodeURIComponent(absUrl)}`;
       }).join('\n');
 

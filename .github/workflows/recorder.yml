@@ -48,10 +48,23 @@ jobs:
       - name: Checkout Code
         uses: actions/checkout@v4
 
-      - name: Install Dependencies
+      - name: Install Dependencies & Setup WARP Egress
         run: |
           sudo apt-get update -qq
-          sudo apt-get install -y ffmpeg curl jq bc python3-pip streamlink || pip install --break-system-packages streamlink yt-dlp || true
+          sudo apt-get install -y ffmpeg curl jq bc python3-pip
+          pip install --break-system-packages streamlink yt-dlp || true
+
+          # Install Cloudflare WARP client for Anycast egress IP
+          curl -fsSL https://pkg.cloudflareclient.com/pubkey.gpg | sudo gpg --yes --dearmor --output /usr/share/keyrings/cloudflare-warp-archive-keyring.gpg || true
+          echo "deb [signed-by=/usr/share/keyrings/cloudflare-warp-archive-keyring.gpg] https://pkg.cloudflareclient.com/ $(lsb_release -cs) main" | sudo tee /etc/apt/sources.list.d/cloudflare-client.list || true
+          sudo apt-get update -qq && sudo apt-get install -y cloudflare-warp || true
+          sudo systemctl start warp-svc || true
+          warp-cli --accept-tos registration new || true
+          warp-cli --accept-tos mode proxy || true
+          warp-cli --accept-tos proxy port 40000 || true
+          warp-cli --accept-tos connect || true
+          sleep 2
+          curl -s --connect-timeout 4 --socks5 127.0.0.1:40000 https://www.cloudflare.com/cdn-cgi/trace || true
 
       - name: Extract Input Parameters
         id: params
@@ -104,33 +117,48 @@ jobs:
 
           mkdir -p raw_segments
 
-          echo "Running native Node.js HLS segment recorder engine..."
-          node recorder_engine.cjs "$STREAM_URL" "raw_segments/rec_part_000.ts" "${DURATION:-45}" "$RECORDING_ID" "$SUPABASE_URL" "$SUPABASE_KEY" || true
+          REC_DUR="${DURATION:-45}"
+          if [ "$REC_DUR" -eq 0 ] 2>/dev/null; then
+            REC_DUR=45
+          fi
 
-          # If node produced 0 segments, try FFmpeg direct fallback
-          shopt -s nullglob
-          VALID_TS=()
-          for f in raw_segments/*.ts; do
-            if [ -f "$f" ] && [ -s "$f" ]; then
-              VALID_TS+=("$f")
+          if [ "$PLATFORM" = "idn" ]; then
+            echo "IDN Live recording: resolving child variant playlist through Cloudflare Worker proxy..."
+            ENCODED_STREAM=$(node -e "console.log(encodeURIComponent(process.argv[1]))" "$STREAM_URL")
+            PROXY_MASTER="https://jkt48-live-watcher.chandra02new.workers.dev/api/proxy/stream.m3u8?url=${ENCODED_STREAM}"
+
+            # 1. First attempt: streamlink via Cloudflare Worker proxy
+            echo "Tier 1: Capture with streamlink via Cloudflare Worker proxy..."
+            timeout "${REC_DUR}s" streamlink --hls-live-restart \
+              --http-header "Origin=https://www.idn.app" \
+              --http-header "Referer=https://www.idn.app/" \
+              --http-header "User-Agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36" \
+              "$PROXY_MASTER" best -o "raw_segments/rec_part_000.ts" || true
+
+            # 2. Second attempt: streamlink via SOCKS5 WARP proxy
+            if [ ! -s "raw_segments/rec_part_000.ts" ]; then
+              echo "Tier 2: Capture with streamlink via SOCKS5 WARP proxy..."
+              timeout "${REC_DUR}s" streamlink --socks5 127.0.0.1:40000 --hls-live-restart \
+                --http-header "Origin=https://www.idn.app" \
+                --http-header "Referer=https://www.idn.app/" \
+                --http-header "User-Agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36" \
+                "$STREAM_URL" best -o "raw_segments/rec_part_000.ts" || true
             fi
-          done
 
-          if [ ${#VALID_TS[@]} -eq 0 ]; then
-            echo "Node engine produced 0 segments. Trying FFmpeg with Cloudflare proxy..."
-            ENCODED_URL=$(node -e "console.log(encodeURIComponent(process.argv[1]))" "$STREAM_URL")
-            PROXIED="https://jkt48-live-watcher.chandra02new.workers.dev/api/proxy/stream.m3u8?url=${ENCODED_URL}"
-            ffmpeg -hide_banner -loglevel warning \
-              -user_agent "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36" \
-              -i "$PROXIED" \
-              -c copy \
-              -t "${DURATION:-45}" \
-              "raw_segments/rec_part_000.ts" || \
+            # 3. Third attempt: native Node.js recorder engine
+            if [ ! -s "raw_segments/rec_part_000.ts" ]; then
+              echo "Tier 3: Capture with Node.js recorder engine..."
+              node recorder_engine.cjs "$STREAM_URL" "raw_segments/rec_part_000.ts" "$REC_DUR" "$RECORDING_ID" "$SUPABASE_URL" "$SUPABASE_KEY" || true
+            fi
+          else
+            # Showroom recording
+            echo "Showroom recording via streamlink / FFmpeg..."
+            timeout "${REC_DUR}s" streamlink "$STREAM_URL" best -o "raw_segments/rec_part_000.ts" || \
             ffmpeg -hide_banner -loglevel warning \
               -user_agent "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36" \
               -i "$STREAM_URL" \
               -c copy \
-              -t "${DURATION:-45}" \
+              -t "$REC_DUR" \
               "raw_segments/rec_part_000.ts" || true
           fi
 
