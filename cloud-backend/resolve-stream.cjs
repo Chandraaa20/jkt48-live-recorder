@@ -54,7 +54,7 @@ async function resolveStream() {
   // If still equal to source or failed, try via Cloudflare Worker proxy
   if (resolvedUrl === url) {
     try {
-      const proxyUrl = `https://jkt48-live-watcher.chandra02new.workers.dev/api/proxy?url=${encodeURIComponent(url)}`;
+      const proxyUrl = `https://jkt48-live-watcher.chandra02new.workers.dev/api/proxy/stream.m3u8?url=${encodeURIComponent(url)}`;
       const pRes = await fetch(proxyUrl);
       if (pRes.ok) {
         const text = await pRes.text();

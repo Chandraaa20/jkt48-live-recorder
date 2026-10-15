@@ -15,26 +15,19 @@ import {
 
 import { getAppConfig } from '../services/supabase';
 
-// Resolve appropriate CORS Proxy URL (Local Vite Proxy or Cloudflare Worker)
+// Resolve appropriate CORS Proxy URL (Always use absolute Cloudflare Worker URL)
 function getProxyUrl(targetUrl) {
   if (!targetUrl) return '';
   const config = getAppConfig();
-  const workerBase = config.workerUrl ? config.workerUrl.replace(/\/$/, '') : '';
-
-  if (typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')) {
-    return `/api/proxy?url=${encodeURIComponent(targetUrl)}`;
-  }
-  if (workerBase) {
-    return `${workerBase}/api/proxy?url=${encodeURIComponent(targetUrl)}`;
-  }
-  return `https://jkt48-live-watcher.chandra02new.workers.dev/api/proxy?url=${encodeURIComponent(targetUrl)}`;
+  const workerBase = (config.workerUrl ? config.workerUrl.replace(/\/$/, '') : '') || 'https://jkt48-live-watcher.chandra02new.workers.dev';
+  return `${workerBase}/api/proxy?url=${encodeURIComponent(targetUrl)}`;
 }
 
 // Fetch fresh stream URL from live aggregator to avoid expired tokens
 async function fetchFreshStreamUrl(currentLive) {
   try {
     let lives = [];
-    const proxyCheck = `/api/proxy?url=${encodeURIComponent('https://api.crstlnz.my.id/api/now_live?group=jkt48')}`;
+    const proxyCheck = `https://jkt48-live-watcher.chandra02new.workers.dev/api/proxy?url=${encodeURIComponent('https://api.crstlnz.my.id/api/now_live?group=jkt48')}`;
     try {
       const res = await fetch(proxyCheck);
       if (res.ok) lives = await res.json();

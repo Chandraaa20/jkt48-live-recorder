@@ -719,42 +719,88 @@ export async function getRecordings() {
   }
 }
 
-// Stop / complete a recording
+// Stop / complete a recording and trigger real Telegram upload
 export async function finishRecording(recordingId) {
   const supabase = getSupabaseClient();
 
-  // Trigger stop on Cloudflare Worker / GitHub Actions proxy
-  stopGitHubRecorder({ recording_id: recordingId }).catch((e) =>
-    console.warn('stopGitHubRecorder note:', e)
-  );
-
+  // 1. Immediately mark status as 'uploading' in Supabase and local storage
   const recs = getLocalData(LOCAL_STORAGE_RECORDINGS, INITIAL_RECORDINGS);
   const updatedRecs = recs.map((r) =>
     r.id === recordingId
-      ? {
-          ...r,
-          status: 'completed',
-          video_url: r.video_url || 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4',
-        }
+      ? { ...r, status: 'uploading' }
       : r
   );
   setLocalData(LOCAL_STORAGE_RECORDINGS, updatedRecs);
 
-  if (!supabase) return { success: true };
+  if (supabase) {
+    try {
+      await supabase
+        .from('recordings')
+        .update({ status: 'uploading' })
+        .eq('id', recordingId);
+    } catch (e) {
+      console.warn('Failed to set uploading status in Supabase:', e);
+    }
+  }
 
+  // 2. Trigger stop on GitHub Actions / Cloudflare Worker (graceful cancel -> remux -> Telegram upload)
   try {
-    const { error } = await supabase
-      .from('recordings')
-      .update({
-        status: 'completed',
-        video_url: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4',
-      })
-      .eq('id', recordingId);
-
-    if (error) throw error;
-    return { success: true };
+    const stopRes = await stopGitHubRecorder({ recording_id: recordingId });
+    return { success: true, run_id: stopRes?.run_id };
   } catch (err) {
     console.error('finishRecording error:', err);
+    return { success: false, error: err.message };
+  }
+}
+
+// Clean garbage recordings (0 MB, 00:00, or failed)
+export async function cleanGarbageRecordings() {
+  const supabase = getSupabaseClient();
+
+  // Clean local storage
+  const recs = getLocalData(LOCAL_STORAGE_RECORDINGS, INITIAL_RECORDINGS);
+  const cleanRecs = recs.filter((r) =>
+    Number(r.file_size_mb || 0) > 0 &&
+    Number(r.duration_seconds || 0) > 0 &&
+    r.status !== 'failed' &&
+    r.video_url &&
+    r.video_url.startsWith('http') &&
+    !r.video_url.includes('BigBuckBunny')
+  );
+  setLocalData(LOCAL_STORAGE_RECORDINGS, cleanRecs);
+
+  if (!supabase) return { success: true, count: recs.length - cleanRecs.length };
+
+  try {
+    // Fetch all recordings to identify garbage IDs
+    const { data, error } = await supabase
+      .from('recordings')
+      .select('id, file_size_mb, duration_seconds, status, video_url');
+
+    if (error) throw error;
+
+    const garbageIds = (data || [])
+      .filter((r) =>
+        !r.file_size_mb ||
+        Number(r.file_size_mb) === 0 ||
+        !r.duration_seconds ||
+        Number(r.duration_seconds) === 0 ||
+        r.status === 'failed' ||
+        !r.video_url ||
+        r.video_url.includes('BigBuckBunny')
+      )
+      .map((r) => r.id);
+
+    if (garbageIds.length > 0) {
+      await supabase
+        .from('recordings')
+        .delete()
+        .in('id', garbageIds);
+    }
+
+    return { success: true, count: garbageIds.length };
+  } catch (err) {
+    console.error('cleanGarbageRecordings error:', err);
     return { success: false, error: err.message };
   }
 }

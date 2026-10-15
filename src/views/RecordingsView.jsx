@@ -9,7 +9,10 @@ import {
   Calendar,
   AlertTriangle,
   StopCircle,
+  Trash2,
+  RefreshCw,
 } from '../components/Icons';
+import { cleanGarbageRecordings } from '../services/dataService';
 
 function formatDuration(sec) {
   if (!sec) return '00:00';
@@ -41,9 +44,11 @@ export default function RecordingsView({
   recordings = [],
   loading = false,
   onFinishRecording,
+  onRefreshRecordings,
 }) {
   const [activeTab, setActiveTab] = useState('in_progress'); // 'in_progress' | 'completed'
   const [finishingId, setFinishingId] = useState(null);
+  const [isCleaning, setIsCleaning] = useState(false);
 
   // Split recordings into in-progress vs completed
   const inProgressList = recordings.filter(
@@ -62,16 +67,45 @@ export default function RecordingsView({
     }
   };
 
+  const handleCleanGarbage = async () => {
+    if (!window.confirm('Bersihkan seluruh rekaman 0 MB, durasi 00:00, atau rekaman gagal dari database?')) {
+      return;
+    }
+    setIsCleaning(true);
+    try {
+      await cleanGarbageRecordings();
+      if (onRefreshRecordings) {
+        await onRefreshRecordings();
+      }
+    } finally {
+      setIsCleaning(false);
+    }
+  };
+
   return (
     <div className="px-4 sm:px-6 pt-5 pb-32 max-w-lg mx-auto space-y-5">
-      {/* Title */}
-      <div>
-        <h2 className="text-xl font-bold text-[#2B2522] tracking-tight">
-          Arsip Rekaman Cloud
-        </h2>
-        <p className="text-xs text-[#6D655F] mt-0.5">
-          Perekaman otomatis tanpa putus & arsip video live JKT48
-        </p>
+      {/* Title & Quick Actions */}
+      <div className="flex items-start justify-between gap-3">
+        <div>
+          <h2 className="text-xl font-bold text-[#2B2522] tracking-tight">
+            Arsip Rekaman Cloud
+          </h2>
+          <p className="text-xs text-[#6D655F] mt-0.5">
+            Perekaman otomatis tanpa putus & arsip video live JKT48
+          </p>
+        </div>
+
+        {/* Clean Garbage Button */}
+        <button
+          onClick={handleCleanGarbage}
+          disabled={isCleaning}
+          className="min-h-[38px] flex items-center space-x-1.5 px-3 py-1.5 rounded-xl bg-[#FAF0E6] hover:bg-[#F4E2D3] text-xs font-bold text-[#8C4A36] border border-[#ECD9C8] shrink-0 transition-all active:scale-95 shadow-xs disabled:opacity-50"
+          title="Bersihkan riwayat rekaman 0 MB atau gagal"
+        >
+          <Trash2 className={`w-3.5 h-3.5 ${isCleaning ? 'animate-spin' : ''}`} />
+          <span className="hidden sm:inline">Bersihkan 0 MB</span>
+          <span className="sm:hidden">Bersihkan</span>
+        </button>
       </div>
 
       {/* Tabs Switcher */}
@@ -191,23 +225,37 @@ export default function RecordingsView({
                       </div>
                     </div>
 
-                    {/* Finish Action Button */}
+                    {/* Finish / Stop & Upload Action Button */}
                     <button
                       onClick={() => handleFinish(rec.id)}
-                      disabled={finishingId === rec.id}
-                      className="min-h-[44px] flex items-center space-x-1.5 px-3.5 py-2 rounded-xl bg-[#FAF8F2] hover:bg-[#F4EFE7] text-xs font-bold text-[#2B2522] transition-all border border-[#E8E1D5] shrink-0 disabled:opacity-50 active:scale-95 shadow-xs"
-                      title="Tandai selesai & simpan arsip"
+                      disabled={finishingId === rec.id || rec.status === 'uploading'}
+                      className={`min-h-[44px] flex items-center space-x-1.5 px-3.5 py-2 rounded-xl text-xs font-bold transition-all border shrink-0 disabled:opacity-50 active:scale-95 shadow-xs ${
+                        rec.status === 'uploading'
+                          ? 'bg-[#EAF1EE] text-[#2D4A3F] border-[#BED5CC]'
+                          : 'bg-[#FAF0E6] hover:bg-[#F4E2D3] text-[#8C4A36] border-[#ECD9C8]'
+                      }`}
+                      title={rec.status === 'uploading' ? 'Sedang memproses upload ke Telegram' : 'Hentikan rekaman dan langsung unggah ke Telegram'}
                     >
-                      <StopCircle className="w-4 h-4 text-[#8C4A36]" />
-                      <span>{finishingId === rec.id ? 'Menyimpan...' : 'Selesaikan'}</span>
+                      <StopCircle className={`w-4 h-4 ${rec.status === 'uploading' ? 'animate-spin text-[#2D4A3F]' : 'text-[#8C4A36]'}`} />
+                      <span>
+                        {finishingId === rec.id
+                          ? 'Menyimpan...'
+                          : rec.status === 'uploading'
+                          ? 'Mengunggah...'
+                          : 'Hentikan & Upload'}
+                      </span>
                     </button>
                   </div>
 
                   {/* Status Banner */}
                   <div className="mt-3.5 pt-3 border-t border-[#F4EFE7] flex items-center justify-between text-[11px]">
-                    <div className="flex items-center space-x-1.5 text-[#2D4A3F] font-bold bg-[#EAF1EE] px-2 py-0.5 rounded-md border border-[#BED5CC]">
-                      <span className="w-2 h-2 rounded-full bg-[#3D5E52] animate-ping" />
-                      <span>Sedang merekam (Segmented .ts)</span>
+                    <div className="flex items-center space-x-1.5 font-bold px-2 py-0.5 rounded-md border text-[11px] bg-[#EAF1EE] text-[#2D4A3F] border-[#BED5CC]">
+                      <span className={`w-2 h-2 rounded-full ${rec.status === 'uploading' ? 'bg-[#3D5E52] animate-bounce' : 'bg-[#3D5E52] animate-ping'}`} />
+                      <span>
+                        {rec.status === 'uploading'
+                          ? 'Menyimpan & Mengunggah ke Telegram...'
+                          : 'Sedang merekam (Segmented .ts)'}
+                      </span>
                     </div>
                     <span className="text-[#8A8179] text-[10px]">
                       Mulai: {formatDate(rec.created_at)}
@@ -240,6 +288,14 @@ export default function RecordingsView({
               const member = rec.member || {};
               const isShowroom = rec.platform?.toLowerCase() === 'showroom';
               const isFailed = rec.status === 'failed';
+              const isValidVideoUrl = Boolean(
+                rec.video_url &&
+                typeof rec.video_url === 'string' &&
+                rec.video_url.startsWith('http') &&
+                !rec.video_url.includes('BigBuckBunny')
+              );
+              const hasRealSize = Number(rec.file_size_mb || 0) > 0;
+              const canOpen = isValidVideoUrl && hasRealSize;
 
               return (
                 <div
@@ -295,7 +351,7 @@ export default function RecordingsView({
                     </div>
 
                     {/* Open Video URL Action */}
-                    {rec.video_url ? (
+                    {canOpen ? (
                       <a
                         href={rec.video_url}
                         target="_blank"
@@ -306,10 +362,10 @@ export default function RecordingsView({
                         <span>Buka</span>
                         <ExternalLink className="w-3.5 h-3.5" />
                       </a>
-                    ) : isFailed ? (
+                    ) : isFailed || !hasRealSize ? (
                       <span className="flex items-center space-x-1 px-3 py-1.5 rounded-xl bg-[#FAF0E6] border border-[#ECD9C8] text-xs text-[#8C4A36] font-bold">
                         <AlertTriangle className="w-3.5 h-3.5 text-[#8C4A36]" />
-                        <span>Gagal</span>
+                        <span>Gagal (0 MB)</span>
                       </span>
                     ) : (
                       <span className="px-3 py-1.5 rounded-xl bg-[#EAF1EE] border border-[#BED5CC] text-xs text-[#2D4A3F] font-bold">

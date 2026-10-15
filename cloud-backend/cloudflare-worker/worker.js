@@ -593,22 +593,23 @@ async function handleHlsProxy(request, env, corsHeaders) {
     if (isPlaylist) {
       const text = await upstreamRes.text();
       const baseUrl = new URL(targetUrl);
-      const proxyBase = `${urlObj.origin}/api/proxy?url=`;
 
-      // Rewrite nested variant stream URLs or chunk URLs
+      // Rewrite nested variant stream URLs or chunk URLs with explicit extension for FFmpeg and HLS players
       const rewritten = text.split('\n').map(line => {
         const trimmed = line.trim();
         if (!trimmed || trimmed.startsWith('#')) {
           if (trimmed.includes('URI="')) {
             return trimmed.replace(/URI="([^"]+)"/g, (match, uri) => {
               const absUrl = new URL(uri, baseUrl).toString();
-              return `URI="${proxyBase}${encodeURIComponent(absUrl)}"`;
+              const ext = absUrl.includes('.m3u8') ? '/stream.m3u8' : '/segment.ts';
+              return `URI="${urlObj.origin}/api/proxy${ext}?url=${encodeURIComponent(absUrl)}"`;
             });
           }
           return line;
         }
         const absUrl = new URL(trimmed, baseUrl).toString();
-        return `${proxyBase}${encodeURIComponent(absUrl)}`;
+        const ext = absUrl.includes('.m3u8') ? '/stream.m3u8' : '/segment.ts';
+        return `${urlObj.origin}/api/proxy${ext}?url=${encodeURIComponent(absUrl)}`;
       }).join('\n');
 
       return new Response(rewritten, {
@@ -659,8 +660,8 @@ export default {
     const pathname = url.pathname;
 
     try {
-      // 0. GET /api/proxy: CORS HLS & TS Stream Proxy
-      if (pathname === '/api/proxy') {
+      // 0. GET /api/proxy: CORS HLS & TS Stream Proxy (supports /api/proxy/stream.m3u8 & /api/proxy/segment.ts)
+      if (pathname === '/api/proxy' || pathname.startsWith('/api/proxy/')) {
         return await handleHlsProxy(request, env, corsHeaders);
       }
 
@@ -732,15 +733,39 @@ export default {
         );
       }
 
-      // 2. POST /api/stop-record: Stop recording and/or cancel runner
+      // 2. POST /api/stop-record: Stop recording and trigger remux/upload
       if (request.method === 'POST' && pathname === '/api/stop-record') {
         const body = await request.json().catch(() => ({}));
         const recordingId = body.recording_id;
-        const runId = body.run_id;
+        let runId = body.run_id;
 
         const repo = env.GITHUB_REPO || 'Chandraaa20/jkt48-live-recorder';
 
-        // Cancel workflow run on GitHub Actions if runId is supplied
+        // Auto-discover in_progress recorder run if runId wasn't passed directly
+        if (!runId && env.GITHUB_TOKEN) {
+          try {
+            const runsRes = await fetch(`https://api.github.com/repos/${repo}/actions/runs?status=in_progress`, {
+              headers: {
+                'Authorization': `Bearer ${env.GITHUB_TOKEN}`,
+                'Accept': 'application/vnd.github.v3+json',
+                'User-Agent': 'JKT48-Cloudflare-Worker/1.0',
+              },
+            });
+            if (runsRes.ok) {
+              const runsData = await runsRes.json();
+              const activeRuns = runsData.workflow_runs || [];
+              const recRun = activeRuns.find((r) =>
+                (r.path && r.path.includes('recorder.yml')) ||
+                (r.name && r.name.toLowerCase().includes('recorder'))
+              );
+              if (recRun) runId = recRun.id;
+            }
+          } catch (e) {
+            console.warn('[stop-record] Active run query failed:', e.message);
+          }
+        }
+
+        // Cancel workflow run on GitHub Actions (graceful stop & trigger remux/upload)
         if (runId && env.GITHUB_TOKEN) {
           await fetch(`https://api.github.com/repos/${repo}/actions/runs/${runId}/cancel`, {
             method: 'POST',
@@ -752,20 +777,21 @@ export default {
           }).catch(() => null);
         }
 
-        // Mark completed in Supabase
+        // Mark as 'uploading' in Supabase so UI shows progress while GitHub Actions remuxes & uploads
         if (recordingId && env.SUPABASE_URL && (env.SUPABASE_SERVICE_ROLE_KEY || env.SUPABASE_ANON_KEY)) {
           const supabase = new SupabaseWorkerClient(
             env.SUPABASE_URL,
             env.SUPABASE_SERVICE_ROLE_KEY || env.SUPABASE_ANON_KEY
           );
-          await supabase.updateRecordingStatus(recordingId, 'completed').catch(() => null);
+          await supabase.updateRecordingStatus(recordingId, 'uploading').catch(() => null);
         }
 
         return new Response(
           JSON.stringify({
             success: true,
             recording_id: recordingId,
-            message: 'Rekaman berhasil dihentikan.',
+            run_id: runId,
+            message: 'Perintah penghentian rekaman berhasil dikirim. File video sedang diproses dan diunggah ke Telegram.',
           }),
           { status: 200, headers: { 'Content-Type': 'application/json', ...corsHeaders } }
         );

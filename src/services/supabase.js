@@ -22,6 +22,13 @@ const DEFAULT_GITHUB_TOKEN = import.meta.env.VITE_GITHUB_TOKEN || '';
 const DEFAULT_TELEGRAM_TOKEN = import.meta.env.VITE_TELEGRAM_BOT_TOKEN || '8984988206:AAEpkoy-TRN6HGg0Uk_MI67Pon7gJiucEuU';
 const DEFAULT_TELEGRAM_CHAT_ID = import.meta.env.VITE_TELEGRAM_CHAT_ID || '-1004418157265';
 
+function pickValid(val, legacyKey, fallback) {
+  if (typeof val === 'string' && val.trim().length > 0) return val.trim();
+  const legacy = localStorage.getItem(legacyKey);
+  if (typeof legacy === 'string' && legacy.trim().length > 0) return legacy.trim();
+  return fallback;
+}
+
 /**
  * Single source of truth for all application configuration
  */
@@ -34,47 +41,13 @@ export function getAppConfig() {
     console.warn('Failed to parse jkt48_unified_config:', e);
   }
 
-  const supabaseUrl = (
-    (parsed.supabaseUrl && parsed.supabaseUrl.trim()) ||
-    (localStorage.getItem(STORAGE_KEY_URL) && localStorage.getItem(STORAGE_KEY_URL).trim()) ||
-    DEFAULT_SUPABASE_URL
-  ).trim();
-
-  const supabaseKey = (
-    (parsed.supabaseKey && parsed.supabaseKey.trim()) ||
-    (localStorage.getItem(STORAGE_KEY_KEY) && localStorage.getItem(STORAGE_KEY_KEY).trim()) ||
-    DEFAULT_SUPABASE_KEY
-  ).trim();
-
-  const workerUrl = (
-    (parsed.workerUrl && parsed.workerUrl.trim()) ||
-    (localStorage.getItem(STORAGE_KEY_WORKER_URL) && localStorage.getItem(STORAGE_KEY_WORKER_URL).trim()) ||
-    DEFAULT_WORKER_URL
-  ).trim();
-
-  const githubToken = (
-    (parsed.githubToken && parsed.githubToken.trim()) ||
-    (localStorage.getItem(STORAGE_KEY_GITHUB_TOKEN) && localStorage.getItem(STORAGE_KEY_GITHUB_TOKEN).trim()) ||
-    DEFAULT_GITHUB_TOKEN
-  ).trim();
-
-  const githubRepo = (
-    (parsed.githubRepo && parsed.githubRepo.trim()) ||
-    (localStorage.getItem(STORAGE_KEY_GITHUB_REPO) && localStorage.getItem(STORAGE_KEY_GITHUB_REPO).trim()) ||
-    DEFAULT_GITHUB_REPO
-  ).trim();
-
-  const telegramBotToken = (
-    (parsed.telegramBotToken && parsed.telegramBotToken.trim()) ||
-    (localStorage.getItem(STORAGE_KEY_TELEGRAM_TOKEN) && localStorage.getItem(STORAGE_KEY_TELEGRAM_TOKEN).trim()) ||
-    DEFAULT_TELEGRAM_TOKEN
-  ).trim();
-
-  const telegramChatId = (
-    (parsed.telegramChatId && parsed.telegramChatId.trim()) ||
-    (localStorage.getItem(STORAGE_KEY_TELEGRAM_CHAT_ID) && localStorage.getItem(STORAGE_KEY_TELEGRAM_CHAT_ID).trim()) ||
-    DEFAULT_TELEGRAM_CHAT_ID
-  ).trim();
+  const supabaseUrl = pickValid(parsed.supabaseUrl, STORAGE_KEY_URL, DEFAULT_SUPABASE_URL);
+  const supabaseKey = pickValid(parsed.supabaseKey, STORAGE_KEY_KEY, DEFAULT_SUPABASE_KEY);
+  const workerUrl = pickValid(parsed.workerUrl, STORAGE_KEY_WORKER_URL, DEFAULT_WORKER_URL);
+  const githubToken = pickValid(parsed.githubToken, STORAGE_KEY_GITHUB_TOKEN, DEFAULT_GITHUB_TOKEN);
+  const githubRepo = pickValid(parsed.githubRepo, STORAGE_KEY_GITHUB_REPO, DEFAULT_GITHUB_REPO);
+  const telegramBotToken = pickValid(parsed.telegramBotToken, STORAGE_KEY_TELEGRAM_TOKEN, DEFAULT_TELEGRAM_TOKEN);
+  const telegramChatId = pickValid(parsed.telegramChatId, STORAGE_KEY_TELEGRAM_CHAT_ID, DEFAULT_TELEGRAM_CHAT_ID);
 
   const enableBrowserNotification = (
     parsed.enableBrowserNotification !== undefined
@@ -340,25 +313,69 @@ export async function triggerGitHubRecorder({ recording_id, member_name, platfor
   };
 }
 
-// Stop GitHub Actions Cloud Recorder
+// Stop GitHub Actions Cloud Recorder & trigger remux/upload
 export async function stopGitHubRecorder({ recording_id, run_id }) {
-  const { workerUrl } = getAppConfig();
-  if (workerUrl) {
+  const cfg = getAppConfig();
+  let targetRunId = run_id;
+
+  // 1. Direct query to GitHub Actions API to find active recorder runs if run_id not provided
+  if (!targetRunId && cfg.githubToken && cfg.githubRepo) {
     try {
-      const workerEndpoint = workerUrl.replace(/\/$/, '') + '/api/stop-record';
+      const runsRes = await fetch(`https://api.github.com/repos/${cfg.githubRepo}/actions/runs?status=in_progress`, {
+        headers: {
+          'Authorization': `Bearer ${cfg.githubToken}`,
+          'Accept': 'application/vnd.github.v3+json',
+        },
+      });
+      if (runsRes.ok) {
+        const runsData = await runsRes.json();
+        const activeRuns = runsData.workflow_runs || [];
+        const recorderRun = activeRuns.find((r) =>
+          (r.path && r.path.includes('recorder.yml')) ||
+          (r.name && r.name.toLowerCase().includes('recorder'))
+        );
+        if (recorderRun) {
+          targetRunId = recorderRun.id;
+        }
+      }
+    } catch (err) {
+      console.warn('Failed to query in-progress GitHub Actions runs:', err);
+    }
+  }
+
+  // 2. Direct cancel on GitHub Actions API (triggers if: always() remux and telegram upload)
+  if (targetRunId && cfg.githubToken && cfg.githubRepo) {
+    try {
+      const cancelRes = await fetch(`https://api.github.com/repos/${cfg.githubRepo}/actions/runs/${targetRunId}/cancel`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${cfg.githubToken}`,
+          'Accept': 'application/vnd.github.v3+json',
+        },
+      });
+      console.log(`GitHub Actions cancel sent for run ${targetRunId}: ${cancelRes.status}`);
+    } catch (err) {
+      console.warn('GitHub Actions run cancel direct error:', err);
+    }
+  }
+
+  // 3. Forward to Cloudflare Worker stop-record endpoint
+  if (cfg.workerUrl) {
+    try {
+      const workerEndpoint = cfg.workerUrl.replace(/\/$/, '') + '/api/stop-record';
       const res = await fetch(workerEndpoint, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ recording_id, run_id }),
+        body: JSON.stringify({ recording_id, run_id: targetRunId }),
       });
       if (res.ok) {
-        return { success: true, message: 'Rekaman dihentikan via Worker Proxy' };
+        return { success: true, run_id: targetRunId, message: 'Rekaman dihentikan via Worker Proxy' };
       }
     } catch (err) {
       console.warn('stopGitHubRecorder Worker error:', err);
     }
   }
-  return { success: true };
+  return { success: true, run_id: targetRunId };
 }
 
 /**

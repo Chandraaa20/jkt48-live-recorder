@@ -107,6 +107,7 @@ jobs:
           # Anti-corruption segmenter: MPEG-TS format is packetized and 100% playable even if cut mid-stream
           echo "Attempting stream recording via direct HLS connection..."
           ffmpeg -hide_banner -loglevel warning \
+            -allowed_segment_extensions ALL \
             -user_agent "$USER_AGENT" \
             -referer "$REFERER_URL" \
             -reconnect 1 \
@@ -119,6 +120,7 @@ jobs:
             -reset_timestamps 1 \
             "raw_segments/rec_part_%03d.ts" &
           
+          trap "echo 'Graceful stop signal received. Stopping ffmpeg...'; kill -INT \$FFMPEG_PID 2>/dev/null || true; wait \$FFMPEG_PID 2>/dev/null || true; exit 0" SIGINT SIGTERM
           FFMPEG_PID=$!
           wait $FFMPEG_PID || true
 
@@ -134,9 +136,10 @@ jobs:
           if [ ${#VALID_TS[@]} -eq 0 ]; then
             echo "Direct capture produced 0 segments. Falling back to Cloudflare Stream Proxy..."
             ENCODED_URL=$(node -e "console.log(encodeURIComponent(process.argv[1]))" "$TARGET_URL")
-            PROXY_URL="https://jkt48-live-watcher.chandra02new.workers.dev/api/proxy?url=${ENCODED_URL}"
+            PROXY_URL="https://jkt48-live-watcher.chandra02new.workers.dev/api/proxy/live.m3u8?url=${ENCODED_URL}"
             
             ffmpeg -hide_banner -loglevel warning \
+              -allowed_segment_extensions ALL \
               -user_agent "$USER_AGENT" \
               -referer "$REFERER_URL" \
               -reconnect 1 \
@@ -319,19 +322,26 @@ jobs:
             exit 0
           fi
 
-          if [ "$HAS_VIDEO" = "true" ]; then
-            echo "Marking recording as completed in Supabase..."
+          # Only mark completed if video was captured, size is > 0, and duration is > 0
+          IS_VALID_RECORDING=false
+          if [ "$HAS_VIDEO" = "true" ] && [ -n "$FILE_SIZE_MB" ]; then
+            IS_POSITIVE=$(awk "BEGIN {print ($FILE_SIZE_MB > 0.05) ? 1 : 0}")
+            if [ "$IS_POSITIVE" -eq 1 ] && [ "${TOTAL_DURATION:-0}" -gt 0 ]; then
+              IS_VALID_RECORDING=true
+            fi
+          fi
+
+          if [ "$IS_VALID_RECORDING" = "true" ]; then
+            echo "Marking recording as completed in Supabase (${FILE_SIZE_MB} MB, ${TOTAL_DURATION}s)..."
             FINAL_URL="${TELEGRAM_LINK:-https://t.me}"
             curl -s -X PATCH "${SUPABASE_URL}/rest/v1/recordings?id=eq.${RECORDING_ID}" \
               -H "apikey: ${SUPABASE_KEY}" \
               -H "Authorization: Bearer ${SUPABASE_KEY}" \
               -H "Content-Type: application/json" \
-              -d "{\"status\":\"completed\",\"video_url\":\"${FINAL_URL}\",\"duration_seconds\":${TOTAL_DURATION:-120},\"file_size_mb\":${FILE_SIZE_MB:-10.0}}" || true
+              -d "{\"status\":\"completed\",\"video_url\":\"${FINAL_URL}\",\"duration_seconds\":${TOTAL_DURATION},\"file_size_mb\":${FILE_SIZE_MB}}" || true
           else
-            echo "No video captured; marking status as failed/empty in Supabase..."
-            curl -s -X PATCH "${SUPABASE_URL}/rest/v1/recordings?id=eq.${RECORDING_ID}" \
+            echo "Recording is 0 MB or stream was unavailable. Deleting recording ${RECORDING_ID} from Supabase to prevent 0 MB garbage..."
+            curl -s -X DELETE "${SUPABASE_URL}/rest/v1/recordings?id=eq.${RECORDING_ID}" \
               -H "apikey: ${SUPABASE_KEY}" \
-              -H "Authorization: Bearer ${SUPABASE_KEY}" \
-              -H "Content-Type: application/json" \
-              -d '{"status":"failed"}' || true
+              -H "Authorization: Bearer ${SUPABASE_KEY}" || true
           fi

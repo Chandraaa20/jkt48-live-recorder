@@ -332,6 +332,7 @@ export default function App() {
             recordings={recordings}
             loading={loading}
             onFinishRecording={handleFinishRecording}
+            onRefreshRecordings={() => loadAllData(false)}
           />
         )}
 
