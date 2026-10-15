@@ -14,8 +14,8 @@ async function resolveStream() {
   const referer = platform === 'showroom' ? 'https://www.showroom-live.com/' : 'https://www.idn.app/';
   const ua = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36';
 
-  console.log(`[StreamResolver] Resolving stream for platform: ${platform}`);
-  console.log(`[StreamResolver] Source URL: ${url}`);
+  console.error(`[StreamResolver] Resolving stream for platform: ${platform}`);
+  console.error(`[StreamResolver] Source URL: ${url}`);
 
   let resolvedUrl = url;
 
@@ -37,16 +37,16 @@ async function resolveStream() {
           const trimmed = line.trim();
           if (trimmed && !trimmed.startsWith('#') && (trimmed.includes('.m3u8') || trimmed.startsWith('http'))) {
             resolvedUrl = new URL(trimmed, url).toString();
-            console.log(`[StreamResolver] Successfully resolved child media playlist: ${resolvedUrl}`);
+            console.error(`[StreamResolver] Successfully resolved child media playlist: ${resolvedUrl}`);
             break;
           }
         }
         break;
       } else {
-        console.warn(`[StreamResolver] Attempt ${attempt} returned status ${res.status}`);
+        console.error(`[StreamResolver] Attempt ${attempt} returned status ${res.status}`);
       }
     } catch (e) {
-      console.warn(`[StreamResolver] Attempt ${attempt} error:`, e.message);
+      console.error(`[StreamResolver] Attempt ${attempt} error:`, e.message);
     }
     await new Promise((r) => setTimeout(r, 400));
   }
