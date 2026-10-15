@@ -93,15 +93,17 @@ jobs:
           # Trap termination signals so running ffmpeg cleanly flushes
           trap 'echo "Signal received, stopping ffmpeg cleanly..."; kill -INT "$FFMPEG_PID" 2>/dev/null' SIGTERM SIGINT
 
-          HTTP_HEADERS="Referer: https://www.idn.app/\r\nUser-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36\r\n"
+          USER_AGENT="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+          REFERER_URL="https://www.idn.app/"
           if [ "$PLATFORM" = "showroom" ]; then
-            HTTP_HEADERS="Referer: https://www.showroom-live.com/\r\nUser-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36\r\n"
+            REFERER_URL="https://www.showroom-live.com/"
           fi
 
           # Anti-corruption segmenter: MPEG-TS format is packetized and 100% playable even if cut mid-stream
           echo "Attempting stream recording via direct HLS connection..."
           ffmpeg -hide_banner -loglevel warning \
-            -headers "$HTTP_HEADERS" \
+            -user_agent "$USER_AGENT" \
+            -referer "$REFERER_URL" \
             -reconnect 1 \
             -reconnect_streamed 1 \
             -reconnect_delay_max 5 \
@@ -130,6 +132,8 @@ jobs:
             PROXY_URL="https://jkt48-live-watcher.chandra02new.workers.dev/api/proxy?url=${ENCODED_URL}"
             
             ffmpeg -hide_banner -loglevel warning \
+              -user_agent "$USER_AGENT" \
+              -referer "$REFERER_URL" \
               -reconnect 1 \
               -reconnect_streamed 1 \
               -reconnect_delay_max 5 \
