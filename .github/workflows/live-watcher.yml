@@ -36,4 +36,4 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.RECORDER_PAT || secrets.VITE_GITHUB_TOKEN || secrets.GH_PAT || secrets.GITHUB_TOKEN }}
           GITHUB_REPOSITORY: ${{ github.repository }}
         run: |
-          node cloud-backend/github-watcher.js
+          node cloud-backend/github-watcher.cjs
