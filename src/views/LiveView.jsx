@@ -5,8 +5,6 @@ import {
   Disc3,
   CheckCircle2,
   Clock,
-  Sparkles,
-  Trash2,
 } from '../components/Icons';
 
 function formatDuration(sec) {
@@ -21,8 +19,6 @@ export default function LiveView({
   loading = false,
   onOpenPlayer,
   onTriggerRecord,
-  onSimulateLive,
-  onClearSimulated,
 }) {
   const [triggeringId, setTriggeringId] = useState(null);
   const [elapsedSecs, setElapsedSecs] = useState({});
@@ -62,11 +58,9 @@ export default function LiveView({
     }
   };
 
-  const hasSimulated = lives.some((l) => l.is_simulated || l.id?.startsWith('live-sim-'));
-
   return (
     <div className="px-4 sm:px-6 pt-5 pb-32 max-w-lg mx-auto space-y-5">
-      {/* View Header with Title & Simulation Action */}
+      {/* View Header with Title */}
       <div className="flex items-center justify-between gap-3">
         <div>
           <div className="flex items-center space-x-2">
@@ -82,45 +76,7 @@ export default function LiveView({
             Streaming langsung dari IDN Live & Showroom
           </p>
         </div>
-
-        <div className="flex items-center space-x-2">
-          {hasSimulated && (
-            <button
-              onClick={onClearSimulated}
-              className="min-h-[40px] px-3.5 py-1.5 rounded-xl bg-[#FAF0E6] hover:bg-[#F3E5D6] border border-[#ECD9C8] text-[#8C4A36] text-xs font-bold flex items-center space-x-1.5 transition-all shadow-xs active:scale-95"
-              title="Hapus semua live simulasi testing"
-            >
-              <Trash2 className="w-3.5 h-3.5" />
-              <span>Hapus Simulasi</span>
-            </button>
-          )}
-
-          <button
-            onClick={onSimulateLive}
-            className="min-h-[40px] px-3.5 py-1.5 rounded-xl bg-white hover:bg-[#FAF8F2] border border-[#E8E1D5] text-[#3D5E52] text-xs font-bold flex items-center space-x-1.5 transition-all shadow-xs active:scale-95"
-            title="Picu live simulasi Freya JKT48 untuk uji player & auto-record"
-          >
-            <Sparkles className="w-3.5 h-3.5 text-[#3D5E52]" />
-            <span>Simulasi Live</span>
-          </button>
-        </div>
       </div>
-
-      {/* Simulated Live Active Alert Banner */}
-      {hasSimulated && (
-        <div className="p-3.5 rounded-2xl bg-[#FBF6EE] border border-[#E8DFD0] text-[#745B3A] text-xs flex items-center justify-between shadow-xs">
-          <div className="flex items-center space-x-2">
-            <span className="w-2 h-2 rounded-full bg-[#C94A3D] shrink-0" />
-            <span className="font-medium">Data simulasi aktif untuk pengetesan player & recorder.</span>
-          </div>
-          <button
-            onClick={onClearSimulated}
-            className="text-xs font-bold text-[#745B3A] hover:text-[#2B2522] underline underline-offset-2 ml-2 shrink-0"
-          >
-            Bersihkan
-          </button>
-        </div>
-      )}
 
       {/* Lives List / Empty State */}
       {loading ? (
@@ -133,25 +89,18 @@ export default function LiveView({
           ))}
         </div>
       ) : lives.length === 0 ? (
-        <div className="p-8 sm:p-10 rounded-2xl bg-white border border-[#E8E1D5] text-center space-y-4 my-2 shadow-[0_2px_12px_-3px_rgba(43,37,34,0.06)]">
+        <div className="p-8 sm:p-10 rounded-2xl bg-white border border-[#E8E1D5] text-center space-y-3 my-2 shadow-[0_2px_12px_-3px_rgba(43,37,34,0.06)]">
           <div className="w-14 h-14 mx-auto rounded-2xl bg-[#FAF0E6] flex items-center justify-center text-[#8C4A36]">
             <Radio className="w-7 h-7" />
           </div>
           <div className="space-y-1">
             <h3 className="text-base font-bold text-[#2B2522]">
-              Belum ada member JKT48 yang sedang live saat ini
+              Belum ada member yang sedang live saat ini
             </h3>
             <p className="text-xs text-[#6D655F] max-w-sm mx-auto leading-relaxed">
-              Saat ini tidak ada siaran langsung di IDN Live maupun Showroom. Data otomatis diperbarui setiap 60 detik.
+              Saat ini tidak ada siaran langsung di IDN Live maupun Showroom. Data diperiksa dan disinkronkan secara real-time.
             </p>
           </div>
-          <button
-            onClick={onSimulateLive}
-            className="min-h-[44px] px-5 py-2.5 rounded-xl bg-[#3D5E52] hover:bg-[#314D43] text-white text-xs font-bold inline-flex items-center space-x-2 transition-all shadow-md shadow-[#3D5E52]/20 active:scale-95"
-          >
-            <Sparkles className="w-4 h-4" />
-            <span>Mulai Simulasi Live (Testing)</span>
-          </button>
         </div>
       ) : (
         <div className="space-y-4">

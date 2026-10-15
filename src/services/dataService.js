@@ -530,18 +530,12 @@ export async function syncRealActiveLives() {
       }
     }
 
-    // Preserve only user-triggered simulated lives (excluding any legacy dummy IDs)
-    const localLives = getLocalData(LOCAL_STORAGE_LIVES, []);
-    const userSimulated = localLives.filter(
-      (l) => (l.is_simulated || l.id?.startsWith('live-sim-')) && l.id !== 'live-freya-01' && l.id !== 'live-marsha-02'
-    );
-
-    const mergedLives = [...activeMatched, ...userSimulated];
-    setLocalData(LOCAL_STORAGE_LIVES, mergedLives);
+    setLocalData(LOCAL_STORAGE_LIVES, activeMatched);
 
     // If connected to Supabase, sync database
     if (supabase) {
-      // 1. Purge obsolete dummy records
+      // 1. Purge any legacy dummy records or simulated IDs
+      await supabase.from('active_lives').delete().like('id', 'live-sim-%');
       await supabase.from('active_lives').delete().in('id', ['live-freya-01', 'live-marsha-02']);
 
       // 2. Upsert matched real lives
@@ -554,46 +548,17 @@ export async function syncRealActiveLives() {
       const { data: dbLives } = await supabase.from('active_lives').select('id');
       const activeIds = new Set(activeMatched.map((l) => l.id));
       for (const d of (dbLives || [])) {
-        if (!activeIds.has(d.id) && !d.id.startsWith('live-sim-')) {
+        if (!activeIds.has(d.id)) {
           await supabase.from('active_lives').delete().eq('id', d.id);
         }
       }
     }
 
-    return mergedLives;
+    return activeMatched;
   } catch (err) {
     console.warn('syncRealActiveLives error, using cached lives:', err.message);
     return getActiveLives();
   }
-}
-
-/**
- * Remove all simulated lives and return to pure real monitoring mode
- */
-export async function clearSimulatedLives() {
-  const supabase = getSupabaseClient();
-  const localLives = getLocalData(LOCAL_STORAGE_LIVES, []);
-  const realOnly = localLives.filter(
-    (l) => !l.is_simulated && !l.id?.startsWith('live-sim-') && l.id !== 'live-freya-01' && l.id !== 'live-marsha-02'
-  );
-  setLocalData(LOCAL_STORAGE_LIVES, realOnly);
-
-  // Clear simulated from notified tracker
-  try {
-    const list = getNotifiedLives().filter((id) => !id.startsWith('live-sim-'));
-    localStorage.setItem(LOCAL_STORAGE_NOTIFIED_LIVES, JSON.stringify(list));
-  } catch (_) {}
-
-  if (supabase) {
-    try {
-      await supabase.from('active_lives').delete().like('id', 'live-sim-%');
-      await supabase.from('active_lives').delete().in('id', ['live-freya-01', 'live-marsha-02']);
-    } catch (e) {
-      console.warn('clearSimulatedLives Supabase note:', e);
-    }
-  }
-
-  return realOnly;
 }
 
 // Trigger manual recording on active live

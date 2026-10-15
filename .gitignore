@@ -29,3 +29,4 @@ dist-apk
 android/
 .wrangler/
 cloud-backend/cloudflare-worker/.wrangler/
+scratch/

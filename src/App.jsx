@@ -17,7 +17,6 @@ import {
   seedInitialMembers,
   getActiveLives,
   syncRealActiveLives,
-  clearSimulatedLives,
   triggerManualRecord,
   getRecordings,
   finishRecording,
@@ -212,83 +211,11 @@ export default function App() {
     }
   };
 
-  // Simulate a test live stream (e.g. if list is empty or for instant player testing)
-  const handleSimulateLive = async () => {
-    const targetMember =
-      members.find((m) => m.nickname === 'Freya') ||
-      members[0] || {
-        id: crypto.randomUUID(),
-        name: 'Freya Jayawardana',
-        nickname: 'Freya',
-        avatar_url: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=300&h=300&fit=crop',
-      };
-
-    const newSimulatedLive = {
-      id: `live-sim-${Date.now()}`,
-      member_id: targetMember.id,
-      platform: 'idn',
-      title: 'Malam mingguan bareng Freya! ✨ [Live Test]',
-      stream_url: 'https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8',
-      thumbnail_url: 'https://images.unsplash.com/photo-1516450360452-9312f5e86fc7?w=600&h=340&fit=crop',
-      started_at: new Date().toISOString(),
-      is_recording: targetMember.is_auto_record ?? false,
-      is_simulated: true,
-      member: targetMember,
-    };
-
-    setActiveLives((prev) => [newSimulatedLive, ...prev]);
-
-    // If member has is_auto_record = true, also spawn recording entry!
-    if (targetMember.is_auto_record) {
-      await triggerManualRecord(
-        newSimulatedLive.id,
-        targetMember.id,
-        newSimulatedLive.title,
-        newSimulatedLive.platform
-      );
-    }
-
-    // If member has is_notify = true, send live notification!
-    if (targetMember.is_notify !== false) {
-      sendDeviceNotification(`🔴 ${targetMember.name} Sedang Live! (Simulasi)`, {
-        body: 'IDN LIVE: Malam mingguan bareng Freya! ✨ [Live Test]',
-        icon: targetMember.avatar_url,
-      });
-
-      sendTelegramNotification({
-        text: `🔔 <b>JKT48 LIVE ALERT! [SIMULASI TEST]</b>\n\n` +
-          `👤 <b>Member:</b> ${targetMember.name}\n` +
-          `📺 <b>Platform:</b> IDN LIVE\n` +
-          `📝 <b>Judul:</b> Malam mingguan bareng Freya! ✨ [Live Test]\n` +
-          `⏺️ <b>Cloud Recording:</b> ${targetMember.is_auto_record ? '✅ AKTIF (Otomatis Merekam)' : '⏸️ Tidak Aktif'}\n\n` +
-          `<i>Sesi simulasi uji coba player dan notifikasi.</i>`,
-        photoUrl: newSimulatedLive.thumbnail_url,
-      }).catch(() => {});
-    }
-  };
-
-  // Clear simulated lives and return to pure real monitoring mode
-  const handleClearSimulated = async () => {
-    setIsRefreshing(true);
-    try {
-      const remaining = await clearSimulatedLives();
-      setActiveLives(remaining);
-      // Fetch fresh real JKT48 active lives
-      const freshReal = await syncRealActiveLives();
-      setActiveLives(freshReal);
-    } catch (err) {
-      console.error('Failed to clear simulated lives:', err);
-    } finally {
-      setIsRefreshing(false);
-    }
-  };
-
   // Open Player Modal
   const handleOpenPlayer = (live) => {
     setSelectedLive(live);
     setIsPlayerOpen(true);
   };
-
 
   // Count active recordings
   const activeRecCount = recordings.filter(
@@ -313,8 +240,6 @@ export default function App() {
             loading={loading}
             onOpenPlayer={handleOpenPlayer}
             onTriggerRecord={handleTriggerRecord}
-            onSimulateLive={handleSimulateLive}
-            onClearSimulated={handleClearSimulated}
           />
         )}
 

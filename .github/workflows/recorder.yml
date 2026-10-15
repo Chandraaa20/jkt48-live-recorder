@@ -104,104 +104,10 @@ jobs:
 
           mkdir -p raw_segments
 
-          USER_AGENT="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36"
-          REFERER_URL="https://www.idn.app/"
-          if [ "$PLATFORM" = "showroom" ]; then
-            REFERER_URL="https://www.showroom-live.com/"
-          fi
+          echo "Running native Node.js HLS segment recorder engine..."
+          node recorder_engine.cjs "$STREAM_URL" "raw_segments/rec_part_000.ts" "${DURATION:-45}" "$RECORDING_ID" "$SUPABASE_URL" "$SUPABASE_KEY" || true
 
-          echo "Resolving active stream playlist URL..."
-          ORIGIN_HEADER="https://www.idn.app"
-          if [ "$PLATFORM" = "showroom" ]; then
-            ORIGIN_HEADER="https://www.showroom-live.com"
-          fi
-
-          TARGET_URL="$STREAM_URL"
-          if [ "$PLATFORM" = "idn" ] || [[ "$STREAM_URL" =~ live-video\.net ]]; then
-            # Test direct connection first with browser headers
-            DIRECT_HTTP=$(curl -s -o /dev/null -w "%{http_code}" -A "$USER_AGENT" -H "Origin: $ORIGIN_HEADER" -H "Referer: $REFERER_URL" "$STREAM_URL" || echo "000")
-            echo "Direct stream test returned HTTP $DIRECT_HTTP"
-
-            if [ "$DIRECT_HTTP" = "200" ]; then
-              echo "Direct connection successful! Using direct stream URL."
-              TARGET_URL="$STREAM_URL"
-            else
-              echo "Direct stream returned $DIRECT_HTTP. Routing via Cloudflare Worker Proxy..."
-              ENCODED_URL=$(node -e "console.log(encodeURIComponent(process.argv[1]))" "$STREAM_URL")
-              MASTER_PROXY="https://jkt48-live-watcher.chandra02new.workers.dev/api/proxy/stream.m3u8?url=${ENCODED_URL}"
-              echo "Master Proxy URL: $MASTER_PROXY"
-              
-              # Fetch variant playlist through Worker Proxy using browser User-Agent
-              CHILD_PROXY=$(curl -sL -A "$USER_AGENT" -H "Origin: $ORIGIN_HEADER" -H "Referer: $REFERER_URL" "$MASTER_PROXY" | grep -v '^#' | grep -E '^https?://' | head -n 1 || true)
-              if [ -n "$CHILD_PROXY" ]; then
-                TARGET_URL="$CHILD_PROXY"
-                echo "Resolved Child Playlist Proxy URL: $TARGET_URL"
-              else
-                TARGET_URL="$MASTER_PROXY"
-                echo "Using Master Playlist Proxy URL: $TARGET_URL"
-              fi
-            fi
-          else
-            echo "Showroom Stream direct HLS: $TARGET_URL"
-          fi
-
-          echo "Starting recording engine..."
-          # Both streamlink and ffmpeg need the proper browser headers and origin
-          if command -v streamlink >/dev/null 2>&1; then
-            echo "Capturing stream using Streamlink..."
-            streamlink \
-              --http-header "User-Agent=$USER_AGENT" \
-              --http-header "Origin=$ORIGIN_HEADER" \
-              --http-header "Referer=$REFERER_URL" \
-              "$TARGET_URL" best -o "raw_segments/rec_part_000.ts" --retry-streams 5 --retry-open 5 &
-            REC_PID=$!
-          else
-            echo "Capturing stream using FFmpeg..."
-            ffmpeg -hide_banner -loglevel warning \
-              -headers "User-Agent: ${USER_AGENT}\r\nOrigin: ${ORIGIN_HEADER}\r\nReferer: ${REFERER_URL}\r\n" \
-              -reconnect 1 \
-              -reconnect_streamed 1 \
-              -reconnect_delay_max 5 \
-              -i "$TARGET_URL" \
-              -c copy \
-              -f segment \
-              -segment_time 3600 \
-              -reset_timestamps 1 \
-              "raw_segments/rec_part_%03d.ts" &
-            REC_PID=$!
-          fi
-
-          # Background loop monitoring stop signal from Supabase
-          (
-            while true; do
-              sleep 3
-              CURRENT_STATUS=$(curl -s "${SUPABASE_URL}/rest/v1/recordings?id=eq.${RECORDING_ID}&select=status" \
-                -H "apikey: ${SUPABASE_KEY}" \
-                -H "Authorization: Bearer ${SUPABASE_KEY}" | jq -r '.[0].status' 2>/dev/null || echo "")
-              if [ "$CURRENT_STATUS" = "uploading" ] || [ "$CURRENT_STATUS" = "stopping" ]; then
-                echo "Stop signal ('$CURRENT_STATUS') detected in Supabase. Stopping recorder cleanly..."
-                kill -INT "$REC_PID" 2>/dev/null || true
-                break
-              fi
-            done
-          ) &
-          MONITOR_PID=$!
-
-          # Optional duration timer
-          if [ "${DURATION:-0}" -gt 0 ]; then
-            (
-              sleep "$DURATION"
-              echo "Target duration of ${DURATION}s reached. Stopping recorder cleanly..."
-              kill -INT "$REC_PID" 2>/dev/null || true
-            ) &
-            TIMER_PID=$!
-          fi
-
-          trap "echo 'Graceful stop signal received. Stopping recorder...'; kill -INT \$REC_PID 2>/dev/null || true; wait \$REC_PID 2>/dev/null || true; kill \$MONITOR_PID \$TIMER_PID 2>/dev/null || true; exit 0" SIGINT SIGTERM
-          wait $REC_PID || true
-          kill "$MONITOR_PID" "$TIMER_PID" 2>/dev/null || true
-
-          # If initial attempt produced 0 segments, try FFmpeg fallback
+          # If node produced 0 segments, try FFmpeg direct fallback
           shopt -s nullglob
           VALID_TS=()
           for f in raw_segments/*.ts; do
@@ -211,24 +117,16 @@ jobs:
           done
 
           if [ ${#VALID_TS[@]} -eq 0 ]; then
-            echo "First attempt produced 0 segments. Trying FFmpeg fallback with browser headers..."
+            echo "Node engine produced 0 segments. Trying FFmpeg direct fallback..."
             ffmpeg -hide_banner -loglevel warning \
-              -headers "User-Agent: ${USER_AGENT}\r\nOrigin: ${ORIGIN_HEADER}\r\nReferer: ${REFERER_URL}\r\n" \
-              -reconnect 1 \
-              -reconnect_streamed 1 \
-              -reconnect_delay_max 5 \
-              -i "$TARGET_URL" \
+              -user_agent "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36" \
+              -i "$STREAM_URL" \
               -c copy \
-              -f segment \
-              -segment_time 3600 \
-              -reset_timestamps 1 \
-              "raw_segments/rec_part_%03d.ts" &
-            REC_PID=$!
-            trap "echo 'Graceful stop signal received in fallback. Stopping ffmpeg...'; kill -INT \$REC_PID 2>/dev/null || true; wait \$REC_PID 2>/dev/null || true; exit 0" SIGINT SIGTERM
-            wait $REC_PID || true
+              -t "${DURATION:-45}" \
+              "raw_segments/rec_part_000.ts" || true
           fi
 
-          echo "Recording step completed or stopped."
+          echo "Recording step completed."
 
       - name: Remux and Consolidate Video Segments
         if: always()

@@ -81,15 +81,13 @@ class IdnAdapter extends BasePlatformAdapter {
       try {
         const query = `
           query GetLivestreams {
-            getLivestreams(status: "live") {
+            getLivestreams {
               title
               slug
-              image_url
               playback_url
               creator {
                 username
                 name
-                avatar_url
               }
             }
           }
