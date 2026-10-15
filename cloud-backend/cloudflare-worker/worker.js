@@ -568,17 +568,22 @@ async function handleHlsProxy(request, env, corsHeaders) {
     const workerBase = 'https://jkt48-live-watcher.chandra02new.workers.dev';
 
     let upstreamRes = null;
+    const upstreamHeaders = {
+      'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
+      'Referer': referer,
+      'Origin': origin,
+      'Accept': '*/*',
+      'Accept-Language': 'id-ID,id;q=0.9,en-US;q=0.8,en;q=0.7',
+      'Sec-Ch-Ua': '"Chromium";v="124", "Google Chrome";v="124", "Not-A.Brand";v="99"',
+      'Sec-Ch-Ua-Mobile': '?0',
+      'Sec-Ch-Ua-Platform': '"Windows"',
+      'Sec-Fetch-Dest': 'empty',
+      'Sec-Fetch-Mode': 'cors',
+      'Sec-Fetch-Site': 'cross-site',
+    };
+
     for (let attempt = 0; attempt < 4; attempt++) {
-      upstreamRes = await fetch(targetUrl, {
-        headers: {
-          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
-          'Referer': referer,
-          'Origin': origin,
-          'X-Forwarded-For': '103.28.12.1',
-          'X-Real-IP': '103.28.12.1',
-          'Client-IP': '103.28.12.1',
-        },
-      });
+      upstreamRes = await fetch(targetUrl, { headers: upstreamHeaders });
       if (upstreamRes.ok) break;
       if (upstreamRes.status === 403 && attempt < 3) {
         // Small delay to bypass Amazon IVS edge rate-limiting
