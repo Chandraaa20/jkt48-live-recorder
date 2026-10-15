@@ -593,7 +593,7 @@ export async function triggerManualRecord(liveId, memberId, liveTitle, platform,
     recording_id: recordingId,
     member_name: memberName || liveTitle || 'Member JKT48',
     platform: platform || 'idn',
-    stream_url: streamUrl || 'https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8',
+    stream_url: streamUrl || '',
   });
 
   if (!supabase) {

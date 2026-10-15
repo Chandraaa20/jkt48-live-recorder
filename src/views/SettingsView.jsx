@@ -188,7 +188,7 @@ export default function SettingsView({
         recording_id: `test-${Date.now()}`,
         member_name: 'Test Member JKT48',
         platform: 'idn',
-        stream_url: 'https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8',
+        stream_url: '',
       });
       setGithubFeedback(res);
     } finally {
