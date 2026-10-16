@@ -12,6 +12,7 @@ import sys
 import os
 import time
 import json
+import re
 import urllib.parse
 import concurrent.futures
 import requests
@@ -270,17 +271,31 @@ def main():
     variant_url = stream_url
 
     if is_master:
+        # Master manifests often list a low rendition first. Select the
+        # largest advertised variant; downloaded segments are then remuxed
+        # with stream copy, so no quality is lost on the runner.
         lines = master_text.splitlines()
+        variants = []
         for i, line in enumerate(lines):
             line = line.strip()
             if line.startswith('#EXT-X-STREAM-INF'):
-                for next_line in lines[i+1:]:
-                    next_line = next_line.strip()
-                    if next_line and not next_line.startswith('#'):
-                        variant_url = urllib.parse.urljoin(stream_url, next_line)
-                        break
-                break
-        print(f"[CaptureHLS] Master Playlist parsed -> Variant Stream: {variant_url}")
+                media_url = next((candidate.strip() for candidate in lines[i + 1:]
+                                  if candidate.strip() and not candidate.strip().startswith('#')), None)
+                if not media_url:
+                    continue
+                bandwidth_match = re.search(r'(?:AVERAGE-)?BANDWIDTH=(\d+)', line)
+                resolution_match = re.search(r'RESOLUTION=(\d+)x(\d+)', line)
+                bandwidth = int(bandwidth_match.group(1)) if bandwidth_match else 0
+                pixels = (int(resolution_match.group(1)) * int(resolution_match.group(2))
+                          if resolution_match else 0)
+                variants.append((bandwidth, pixels, media_url))
+
+        if variants:
+            bandwidth, pixels, media_url = max(variants, key=lambda item: (item[0], item[1]))
+            variant_url = urllib.parse.urljoin(stream_url, media_url)
+            print(f"[CaptureHLS] Master Playlist parsed -> best variant: {bandwidth} bps, {pixels} pixels -> {variant_url}")
+        else:
+            print("[CaptureHLS] Master playlist contains no usable variant; using supplied URL.")
         current_playlist_text = None
     else:
         print(f"[CaptureHLS] Media Playlist directly detected: {variant_url}")
