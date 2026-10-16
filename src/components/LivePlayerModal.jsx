@@ -79,6 +79,7 @@ export default function LivePlayerModal({
   const [isRecordingLoading, setIsRecordingLoading] = useState(false);
   const [recordingSuccess, setRecordingSuccess] = useState(false);
   const [activeUrl, setActiveUrl] = useState('');
+  const member = live?.member || {};
 
   // Start playback with triple-fallback engine
   const startPlayback = (targetUrl, attempt = 1) => {
@@ -301,8 +302,6 @@ export default function LivePlayerModal({
   };
 
   const isShowroom = live.platform?.toLowerCase() === 'showroom';
-  const member = live.member || {};
-
   return (
     <div 
       className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-[#2B2522]/60 backdrop-blur-sm transition-all duration-200 p-0 sm:p-4"

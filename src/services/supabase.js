@@ -12,6 +12,16 @@ const STORAGE_KEY_GITHUB_REPO = 'jkt48_github_repo';
 const STORAGE_KEY_TELEGRAM_TOKEN = 'jkt48_telegram_token';
 const STORAGE_KEY_TELEGRAM_CHAT_ID = 'jkt48_telegram_chat_id';
 const STORAGE_KEY_BROWSER_NOTIF = 'jkt48_browser_notif';
+const CONFIG_VERSION = 'v3_production_sync';
+const STORAGE_KEY_CONFIG_VERSION = 'jkt48_config_version';
+const STALE_CACHE_KEYS = [
+  'jkt48_auto_recorded_lives',
+  'jkt48_notified_lives',
+  'jkt48_members_cache',
+  'jkt48_local_members',
+  'jkt48_local_lives',
+  'jkt48_local_recordings',
+];
 
 // Default values (Baked-in so Android APK is 100% pre-configured on first install)
 const DEFAULT_SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL || 'https://rugjqcvwlfkonziykita.supabase.co';
@@ -21,6 +31,28 @@ const DEFAULT_WORKER_URL = import.meta.env.VITE_WORKER_URL || 'https://jkt48-liv
 const DEFAULT_GITHUB_TOKEN = import.meta.env.VITE_GITHUB_TOKEN || '';
 const DEFAULT_TELEGRAM_TOKEN = import.meta.env.VITE_TELEGRAM_BOT_TOKEN || '8984988206:AAEpkoy-TRN6HGg0Uk_MI67Pon7gJiucEuU';
 const DEFAULT_TELEGRAM_CHAT_ID = import.meta.env.VITE_TELEGRAM_CHAT_ID || '-1004418157265';
+
+// A released APK must never retain an obsolete offline cache that overrides the
+// production roster.  This is deliberately run before configuration/client use.
+function migrateProductionConfig() {
+  try {
+    if (localStorage.getItem(STORAGE_KEY_CONFIG_VERSION) === CONFIG_VERSION) return;
+    STALE_CACHE_KEYS.forEach((key) => localStorage.removeItem(key));
+    localStorage.removeItem(STORAGE_UNIFIED);
+    [
+      STORAGE_KEY_URL,
+      STORAGE_KEY_KEY,
+      STORAGE_KEY_WORKER_URL,
+      STORAGE_KEY_GITHUB_TOKEN,
+      STORAGE_KEY_GITHUB_REPO,
+      STORAGE_KEY_TELEGRAM_TOKEN,
+      STORAGE_KEY_TELEGRAM_CHAT_ID,
+    ].forEach((key) => localStorage.removeItem(key));
+    localStorage.setItem(STORAGE_KEY_CONFIG_VERSION, CONFIG_VERSION);
+  } catch (err) {
+    console.warn('Production configuration migration could not access local storage:', err);
+  }
+}
 
 function pickValid(val, legacyKey, fallback) {
   if (typeof val === 'string' && val.trim().length > 0) return val.trim();
@@ -33,6 +65,7 @@ function pickValid(val, legacyKey, fallback) {
  * Single source of truth for all application configuration
  */
 export function getAppConfig() {
+  migrateProductionConfig();
   let parsed = {};
   try {
     const raw = localStorage.getItem(STORAGE_UNIFIED);

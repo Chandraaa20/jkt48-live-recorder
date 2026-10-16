@@ -109,52 +109,23 @@ class PlaylistFetcher:
         self.cached_session = None
 
     def fetch_playlist(self, url):
-        # 1. Try cached session if available
-        if self.cached_session:
-            try:
-                resp = self.cached_session.get(url, headers=self.headers, timeout=5)
-                if resp.status_code == 200 and '#EXTM3U' in resp.text:
-                    return resp.text
-            except Exception:
-                self.cached_proxy = None
-                self.cached_session = None
-
-        # 2. Try DIRECT connection (no proxy)
-        try:
-            direct_resp = requests.get(url, headers=self.headers, timeout=5)
-            if direct_resp.status_code == 200 and '#EXTM3U' in direct_resp.text:
-                self.cached_proxy = 'DIRECT'
-                self.cached_session = requests.Session()
-                print("[PlaylistFetcher] Direct connection successful (HTTP 200).")
-                return direct_resp.text
-            else:
-                print(f"[PlaylistFetcher] Direct fetch returned HTTP {direct_resp.status_code}.")
-        except Exception as e:
-            print(f"[PlaylistFetcher] Direct fetch failed: {e}")
-
-        # 3. Direct failed or 403 Forbidden -> activate Proxy Resolver
-        print("[PlaylistFetcher] Resolving working Geo-Bypass Proxy for playlist (.m3u8)...")
-        candidates = ProxyPool.gather_proxies()
-
-        # Add Cloudflare Worker proxy as first candidate
+        # Playlist text is deliberately fetched through the Worker first.  Segments
+        # remain direct below, so the runner retains gigabit throughput.
         encoded_target = urllib.parse.quote(url, safe='')
-        cf_proxy_url = f"https://jkt48-live-watcher.chandra02new.workers.dev/api/proxy?url={encoded_target}"
+        cf_proxy_url = f"https://jkt48-live-watcher.chandra02new.workers.dev/api/proxy/stream.m3u8?url={encoded_target}"
+        try:
+            r = requests.get(cf_proxy_url, headers=self.headers, timeout=8)
+            if r.status_code == 200 and '#EXTM3U' in r.text:
+                print("[PlaylistFetcher] Cloudflare Worker proxy resolved playlist.")
+                return r.text
+            print(f"[PlaylistFetcher] Worker proxy returned HTTP {r.status_code}.")
+        except Exception as e:
+            print(f"[PlaylistFetcher] Worker proxy failed: {e}")
 
-        def test_cf():
-            try:
-                r = requests.get(cf_proxy_url, headers=self.headers, timeout=6)
-                if r.status_code == 200 and '#EXTM3U' in r.text:
-                    return ('CF_WORKER', requests.Session(), r.text)
-            except Exception:
-                pass
-            return None
-
-        cf_res = test_cf()
-        if cf_res:
-            self.cached_proxy = cf_res[0]
-            self.cached_session = cf_res[1]
-            print("[PlaylistFetcher] Cloudflare Worker proxy successfully resolved playlist!")
-            return cf_res[2]
+        # A 403 at the Worker edge falls back to nearby public egress then to
+        # CORS text relays.  These only transfer small manifests, never video.
+        print("[PlaylistFetcher] Resolving geo-bypass proxy for playlist (.m3u8)...")
+        candidates = ProxyPool.gather_proxies()
 
         def test_proxy(proxy_str):
             try:
@@ -180,6 +151,15 @@ class PlaylistFetcher:
                         f.cancel()
                     return text
 
+        for relay in ('https://api.allorigins.win/raw?url=', 'https://corsproxy.io/?url='):
+            try:
+                r = requests.get(relay + encoded_target, headers=self.headers, timeout=10)
+                if r.status_code == 200 and '#EXTM3U' in r.text:
+                    print(f"[PlaylistFetcher] CORS relay resolved playlist: {relay}")
+                    return r.text
+            except Exception:
+                pass
+
         raise RuntimeError(f"Unable to fetch playlist: All direct and proxy attempts exhausted for {url}")
 
 class SegmentDownloader:
@@ -202,7 +182,7 @@ class SegmentDownloader:
         # Fallback via Cloudflare Worker if direct returned non-200
         try:
             encoded_seg = urllib.parse.quote(seg_url, safe='')
-            proxy_url = f"https://jkt48-live-watcher.chandra02new.workers.dev/api/proxy?url={encoded_seg}"
+            proxy_url = f"https://jkt48-live-watcher.chandra02new.workers.dev/api/proxy/segment.ts?url={encoded_seg}"
             resp = self.session.get(proxy_url, headers=self.headers, stream=True, timeout=12)
             if resp.status_code == 200:
                 return resp

@@ -38,6 +38,23 @@ export function markLiveNotified(liveId) {
   }
 }
 
+function liveSessionKey(live) {
+  return `${live.id}_${live.started_at || ''}`;
+}
+
+function pruneSessionTracker(activeLives) {
+  try {
+    const valid = new Set((activeLives || []).map(liveSessionKey));
+    const retained = getNotifiedLives().filter((key) => valid.has(key));
+    localStorage.setItem(LOCAL_STORAGE_NOTIFIED_LIVES, JSON.stringify(retained));
+    localStorage.setItem('jkt48_auto_recorded_lives', JSON.stringify(
+      JSON.parse(localStorage.getItem('jkt48_auto_recorded_lives') || '[]').filter((key) => valid.has(key))
+    ));
+  } catch (err) {
+    console.warn('Unable to prune live-session trackers:', err);
+  }
+}
+
 // Helper for local mock storage
 function getLocalData(key, fallback) {
   try {
@@ -158,7 +175,7 @@ export async function saveMember(memberData, platformsList = []) {
     generation: parseInt(memberData.generation, 10) || 1,
     avatar_url: memberData.avatar_url?.trim() || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=300&h=300&fit=crop',
     is_notify: memberData.is_notify ?? true,
-    is_auto_record: memberData.is_auto_record ?? false,
+    is_auto_record: memberData.is_auto_record ?? true,
   };
 
   // Local sync
@@ -283,7 +300,7 @@ export async function seedInitialMembers() {
             generation: genNum,
             avatar_url: m.img_alt || m.img || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=300&h=300&fit=crop',
             is_notify: true,
-            is_auto_record: false, // Default false: user selectively chooses whom to record
+            is_auto_record: true,
             platforms: [
               { platform: 'idn', external_id: idnUsername, room_url_key: idnUsername },
               { platform: 'showroom', external_id: String(m.room_id || ''), room_url_key: srKey },
@@ -480,9 +497,10 @@ export async function syncRealActiveLives() {
     // Process notifications & auto-record triggers for active live sessions
     const notifiedIds = getNotifiedLives();
     for (const realLive of activeMatched) {
+      const sessionKey = liveSessionKey(realLive);
       // 1. Instant Telegram & Device Push Notification if member.is_notify === true
-      if (realLive.member?.is_notify !== false && !notifiedIds.includes(realLive.id)) {
-        markLiveNotified(realLive.id);
+      if (realLive.member?.is_notify !== false && !notifiedIds.includes(sessionKey)) {
+        markLiveNotified(sessionKey);
 
         const platformName = realLive.platform?.toUpperCase() || 'LIVE';
         const autoRecordStatus = realLive.member?.is_auto_record ? '✅ AKTIF (Otomatis Merekam Cloud)' : '⏸️ Tidak Aktif';
@@ -531,6 +549,7 @@ export async function syncRealActiveLives() {
     }
 
     setLocalData(LOCAL_STORAGE_LIVES, activeMatched);
+    pruneSessionTracker(activeMatched);
 
     // If connected to Supabase, sync database
     if (supabase) {

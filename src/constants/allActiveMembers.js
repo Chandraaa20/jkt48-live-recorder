@@ -6,7 +6,7 @@ export const ALL_JKT48_MEMBERS = [
     "generation": 12,
     "avatar_url": "https://img.crstlnz.my.id/uploads/kabesha/jkt48/passion/abigail_rachel.webp",
     "is_notify": true,
-    "is_auto_record": false,
+    "is_auto_record": true,
     "platforms": [
       {
         "platform": "idn",
@@ -27,7 +27,7 @@ export const ALL_JKT48_MEMBERS = [
     "generation": 12,
     "avatar_url": "https://img.crstlnz.my.id/uploads/kabesha/jkt48/dream/adeline_wijaya.webp",
     "is_notify": true,
-    "is_auto_record": false,
+    "is_auto_record": true,
     "platforms": [
       {
         "platform": "idn",
@@ -48,7 +48,7 @@ export const ALL_JKT48_MEMBERS = [
     "generation": 14,
     "avatar_url": "https://img.crstlnz.my.id/uploads/kabesha/jkt48/trainee/afera_thalia.webp",
     "is_notify": true,
-    "is_auto_record": false,
+    "is_auto_record": true,
     "platforms": [
       {
         "platform": "idn",
@@ -69,7 +69,7 @@ export const ALL_JKT48_MEMBERS = [
     "generation": 7,
     "avatar_url": "https://img.crstlnz.my.id/uploads/kabesha/jkt48/passion/angelina_christy.webp",
     "is_notify": true,
-    "is_auto_record": false,
+    "is_auto_record": true,
     "platforms": [
       {
         "platform": "idn",
@@ -90,7 +90,7 @@ export const ALL_JKT48_MEMBERS = [
     "generation": 11,
     "avatar_url": "https://img.crstlnz.my.id/uploads/kabesha/jkt48/love/anindya_ramadhani.webp",
     "is_notify": true,
-    "is_auto_record": false,
+    "is_auto_record": true,
     "platforms": [
       {
         "platform": "idn",
@@ -111,7 +111,7 @@ export const ALL_JKT48_MEMBERS = [
     "generation": 13,
     "avatar_url": "https://img.crstlnz.my.id/uploads/kabesha/jkt48/trainee/astrella_virgiananda.webp",
     "is_notify": true,
-    "is_auto_record": false,
+    "is_auto_record": true,
     "platforms": [
       {
         "platform": "idn",
@@ -132,7 +132,7 @@ export const ALL_JKT48_MEMBERS = [
     "generation": 10,
     "avatar_url": "https://img.crstlnz.my.id/uploads/kabesha/jkt48/love/aurellia.webp",
     "is_notify": true,
-    "is_auto_record": false,
+    "is_auto_record": true,
     "platforms": [
       {
         "platform": "idn",
@@ -153,7 +153,7 @@ export const ALL_JKT48_MEMBERS = [
     "generation": 12,
     "avatar_url": "https://img.crstlnz.my.id/uploads/kabesha/jkt48/love/aurhel_alana.webp",
     "is_notify": true,
-    "is_auto_record": false,
+    "is_auto_record": true,
     "platforms": [
       {
         "platform": "idn",
@@ -174,7 +174,7 @@ export const ALL_JKT48_MEMBERS = [
     "generation": 13,
     "avatar_url": "https://img.crstlnz.my.id/uploads/kabesha/jkt48/trainee/bong_aprilli.webp",
     "is_notify": true,
-    "is_auto_record": false,
+    "is_auto_record": true,
     "platforms": [
       {
         "platform": "idn",
@@ -195,7 +195,7 @@ export const ALL_JKT48_MEMBERS = [
     "generation": 14,
     "avatar_url": "https://img.crstlnz.my.id/uploads/kabesha/jkt48/trainee/carissa_dini.webp",
     "is_notify": true,
-    "is_auto_record": false,
+    "is_auto_record": true,
     "platforms": [
       {
         "platform": "idn",
@@ -216,7 +216,7 @@ export const ALL_JKT48_MEMBERS = [
     "generation": 12,
     "avatar_url": "https://img.crstlnz.my.id/uploads/kabesha/jkt48/passion/catherina_vallencia.webp",
     "is_notify": true,
-    "is_auto_record": false,
+    "is_auto_record": true,
     "platforms": [
       {
         "platform": "idn",
@@ -237,7 +237,7 @@ export const ALL_JKT48_MEMBERS = [
     "generation": 11,
     "avatar_url": "https://img.crstlnz.my.id/uploads/kabesha/jkt48/love/celline_thefani.webp",
     "is_notify": true,
-    "is_auto_record": false,
+    "is_auto_record": true,
     "platforms": [
       {
         "platform": "idn",
@@ -258,7 +258,7 @@ export const ALL_JKT48_MEMBERS = [
     "generation": 14,
     "avatar_url": "https://img.crstlnz.my.id/uploads/kabesha/jkt48/trainee/christabella_bonita.webp",
     "is_notify": true,
-    "is_auto_record": false,
+    "is_auto_record": true,
     "platforms": [
       {
         "platform": "idn",
@@ -279,7 +279,7 @@ export const ALL_JKT48_MEMBERS = [
     "generation": 8,
     "avatar_url": "https://img.crstlnz.my.id/uploads/kabesha/jkt48/passion/cornelia_vanisa.webp",
     "is_notify": true,
-    "is_auto_record": false,
+    "is_auto_record": true,
     "platforms": [
       {
         "platform": "idn",
@@ -300,7 +300,7 @@ export const ALL_JKT48_MEMBERS = [
     "generation": 11,
     "avatar_url": "https://img.crstlnz.my.id/uploads/kabesha/jkt48/love/cynthia_yaputera.webp",
     "is_notify": true,
-    "is_auto_record": false,
+    "is_auto_record": true,
     "platforms": [
       {
         "platform": "idn",
@@ -321,7 +321,7 @@ export const ALL_JKT48_MEMBERS = [
     "generation": 11,
     "avatar_url": "https://img.crstlnz.my.id/uploads/kabesha/jkt48/passion/dena_natalia.webp",
     "is_notify": true,
-    "is_auto_record": false,
+    "is_auto_record": true,
     "platforms": [
       {
         "platform": "idn",
@@ -342,7 +342,7 @@ export const ALL_JKT48_MEMBERS = [
     "generation": 11,
     "avatar_url": "https://img.crstlnz.my.id/uploads/kabesha/jkt48/passion/desy_natalia.webp",
     "is_notify": true,
-    "is_auto_record": false,
+    "is_auto_record": true,
     "platforms": [
       {
         "platform": "idn",
@@ -363,7 +363,7 @@ export const ALL_JKT48_MEMBERS = [
     "generation": 14,
     "avatar_url": "https://img.crstlnz.my.id/uploads/kabesha/jkt48/trainee/fahira_putri.webp",
     "is_notify": true,
-    "is_auto_record": false,
+    "is_auto_record": true,
     "platforms": [
       {
         "platform": "idn",
@@ -384,7 +384,7 @@ export const ALL_JKT48_MEMBERS = [
     "generation": 14,
     "avatar_url": "https://img.crstlnz.my.id/uploads/kabesha/jkt48/trainee/fatimah_azzahra.webp",
     "is_notify": true,
-    "is_auto_record": false,
+    "is_auto_record": true,
     "platforms": [
       {
         "platform": "idn",
@@ -405,7 +405,7 @@ export const ALL_JKT48_MEMBERS = [
     "generation": 7,
     "avatar_url": "https://img.crstlnz.my.id/uploads/kabesha/jkt48/dream/febriola_sinambela.webp",
     "is_notify": true,
-    "is_auto_record": false,
+    "is_auto_record": true,
     "platforms": [
       {
         "platform": "idn",
@@ -426,7 +426,7 @@ export const ALL_JKT48_MEMBERS = [
     "generation": 3,
     "avatar_url": "https://img.crstlnz.my.id/uploads/jdt5e69xwwo8yucb652h95ds.webp",
     "is_notify": true,
-    "is_auto_record": false,
+    "is_auto_record": true,
     "platforms": [
       {
         "platform": "idn",
@@ -447,7 +447,7 @@ export const ALL_JKT48_MEMBERS = [
     "generation": 8,
     "avatar_url": "https://img.crstlnz.my.id/uploads/kabesha/jkt48/love/fiony_alveria.webp",
     "is_notify": true,
-    "is_auto_record": false,
+    "is_auto_record": true,
     "platforms": [
       {
         "platform": "idn",
@@ -468,7 +468,7 @@ export const ALL_JKT48_MEMBERS = [
     "generation": 7,
     "avatar_url": "https://img.crstlnz.my.id/uploads/kabesha/jkt48/dream/freya_jayawardana.webp",
     "is_notify": true,
-    "is_auto_record": false,
+    "is_auto_record": true,
     "platforms": [
       {
         "platform": "idn",
@@ -489,7 +489,7 @@ export const ALL_JKT48_MEMBERS = [
     "generation": 12,
     "avatar_url": "https://img.crstlnz.my.id/uploads/kabesha/jkt48/love/fritzy_rosmerian.webp",
     "is_notify": true,
-    "is_auto_record": false,
+    "is_auto_record": true,
     "platforms": [
       {
         "platform": "idn",
@@ -510,7 +510,7 @@ export const ALL_JKT48_MEMBERS = [
     "generation": 10,
     "avatar_url": "https://img.crstlnz.my.id/uploads/kabesha/jkt48/dream/gabriela_abigail_mewengkang.webp",
     "is_notify": true,
-    "is_auto_record": false,
+    "is_auto_record": true,
     "platforms": [
       {
         "platform": "idn",
@@ -531,7 +531,7 @@ export const ALL_JKT48_MEMBERS = [
     "generation": 6,
     "avatar_url": "https://img.crstlnz.my.id/uploads/kabesha/jkt48/dream/gita_sekar_andarini.webp",
     "is_notify": true,
-    "is_auto_record": false,
+    "is_auto_record": true,
     "platforms": [
       {
         "platform": "idn",
@@ -552,7 +552,7 @@ export const ALL_JKT48_MEMBERS = [
     "generation": 11,
     "avatar_url": "https://img.crstlnz.my.id/uploads/kabesha/jkt48/love/grace_octaviani.webp",
     "is_notify": true,
-    "is_auto_record": false,
+    "is_auto_record": true,
     "platforms": [
       {
         "platform": "idn",
@@ -573,7 +573,7 @@ export const ALL_JKT48_MEMBERS = [
     "generation": 11,
     "avatar_url": "https://img.crstlnz.my.id/uploads/kabesha/jkt48/dream/greesella_adhalia.webp",
     "is_notify": true,
-    "is_auto_record": false,
+    "is_auto_record": true,
     "platforms": [
       {
         "platform": "idn",
@@ -594,7 +594,7 @@ export const ALL_JKT48_MEMBERS = [
     "generation": 13,
     "avatar_url": "https://img.crstlnz.my.id/uploads/kabesha/jkt48/trainee/hagia_sopia.webp",
     "is_notify": true,
-    "is_auto_record": false,
+    "is_auto_record": true,
     "platforms": [
       {
         "platform": "idn",
@@ -615,7 +615,7 @@ export const ALL_JKT48_MEMBERS = [
     "generation": 14,
     "avatar_url": "https://img.crstlnz.my.id/uploads/kabesha/jkt48/trainee/heidi_suyangga.webp",
     "is_notify": true,
-    "is_auto_record": false,
+    "is_auto_record": true,
     "platforms": [
       {
         "platform": "idn",
@@ -636,7 +636,7 @@ export const ALL_JKT48_MEMBERS = [
     "generation": 7,
     "avatar_url": "https://img.crstlnz.my.id/uploads/kabesha/jkt48/dream/helisma_putri.webp",
     "is_notify": true,
-    "is_auto_record": false,
+    "is_auto_record": true,
     "platforms": [
       {
         "platform": "idn",
@@ -657,7 +657,7 @@ export const ALL_JKT48_MEMBERS = [
     "generation": 12,
     "avatar_url": "https://img.crstlnz.my.id/uploads/kabesha/jkt48/love/hillary_abigail.webp",
     "is_notify": true,
-    "is_auto_record": false,
+    "is_auto_record": true,
     "platforms": [
       {
         "platform": "idn",
@@ -678,7 +678,7 @@ export const ALL_JKT48_MEMBERS = [
     "generation": 13,
     "avatar_url": "https://img.crstlnz.my.id/uploads/kabesha/jkt48/trainee/humaira_ramadhani.webp",
     "is_notify": true,
-    "is_auto_record": false,
+    "is_auto_record": true,
     "platforms": [
       {
         "platform": "idn",
@@ -699,7 +699,7 @@ export const ALL_JKT48_MEMBERS = [
     "generation": 9,
     "avatar_url": "https://img.crstlnz.my.id/uploads/kabesha/jkt48/love/indah_cahya_nabilla.webp",
     "is_notify": true,
-    "is_auto_record": false,
+    "is_auto_record": true,
     "platforms": [
       {
         "platform": "idn",
@@ -720,7 +720,7 @@ export const ALL_JKT48_MEMBERS = [
     "generation": 13,
     "avatar_url": "https://img.crstlnz.my.id/uploads/kabesha/jkt48/trainee/jacqueline_immanuela.webp",
     "is_notify": true,
-    "is_auto_record": false,
+    "is_auto_record": true,
     "platforms": [
       {
         "platform": "idn",
@@ -741,7 +741,7 @@ export const ALL_JKT48_MEMBERS = [
     "generation": 12,
     "avatar_url": "https://img.crstlnz.my.id/uploads/kabesha/jkt48/love/jazzlyn_trisha.webp",
     "is_notify": true,
-    "is_auto_record": false,
+    "is_auto_record": true,
     "platforms": [
       {
         "platform": "idn",
@@ -762,7 +762,7 @@ export const ALL_JKT48_MEMBERS = [
     "generation": 13,
     "avatar_url": "https://img.crstlnz.my.id/uploads/kabesha/jkt48/trainee/jemima_evodie.webp",
     "is_notify": true,
-    "is_auto_record": false,
+    "is_auto_record": true,
     "platforms": [
       {
         "platform": "idn",
@@ -783,7 +783,7 @@ export const ALL_JKT48_MEMBERS = [
     "generation": 7,
     "avatar_url": "https://img.crstlnz.my.id/uploads/kabesha/jkt48/passion/jessica_chandra.webp",
     "is_notify": true,
-    "is_auto_record": false,
+    "is_auto_record": true,
     "platforms": [
       {
         "platform": "idn",
@@ -804,7 +804,7 @@ export const ALL_JKT48_MEMBERS = [
     "generation": 10,
     "avatar_url": "https://img.crstlnz.my.id/uploads/kabesha/jkt48/dream/jesslyn_elly.webp",
     "is_notify": true,
-    "is_auto_record": false,
+    "is_auto_record": true,
     "platforms": [
       {
         "platform": "idn",
@@ -825,7 +825,7 @@ export const ALL_JKT48_MEMBERS = [
     "generation": 7,
     "avatar_url": "https://img.crstlnz.my.id/assets/img/jkt48poster1_pemrgm.jpg",
     "is_notify": true,
-    "is_auto_record": false,
+    "is_auto_record": true,
     "platforms": [
       {
         "platform": "idn",
@@ -846,7 +846,7 @@ export const ALL_JKT48_MEMBERS = [
     "generation": 9,
     "avatar_url": "https://img.crstlnz.my.id/uploads/kabesha/jkt48/passion/kathrina_irene.webp",
     "is_notify": true,
-    "is_auto_record": false,
+    "is_auto_record": true,
     "platforms": [
       {
         "platform": "idn",
@@ -867,7 +867,7 @@ export const ALL_JKT48_MEMBERS = [
     "generation": 8,
     "avatar_url": "https://img.crstlnz.my.id/uploads/kabesha/jkt48/passion/lulu_salsabila.webp",
     "is_notify": true,
-    "is_auto_record": false,
+    "is_auto_record": true,
     "platforms": [
       {
         "platform": "idn",
@@ -888,7 +888,7 @@ export const ALL_JKT48_MEMBERS = [
     "generation": 9,
     "avatar_url": "https://img.crstlnz.my.id/uploads/kabesha/jkt48/dream/marsha_lenathea.webp",
     "is_notify": true,
-    "is_auto_record": false,
+    "is_auto_record": true,
     "platforms": [
       {
         "platform": "idn",
@@ -909,7 +909,7 @@ export const ALL_JKT48_MEMBERS = [
     "generation": 14,
     "avatar_url": "https://img.crstlnz.my.id/uploads/kabesha/jkt48/trainee/maxine_faye.webp",
     "is_notify": true,
-    "is_auto_record": false,
+    "is_auto_record": true,
     "platforms": [
       {
         "platform": "idn",
@@ -930,7 +930,7 @@ export const ALL_JKT48_MEMBERS = [
     "generation": 11,
     "avatar_url": "https://img.crstlnz.my.id/uploads/kabesha/jkt48/love/michelle_alexandra.webp",
     "is_notify": true,
-    "is_auto_record": false,
+    "is_auto_record": true,
     "platforms": [
       {
         "platform": "idn",
@@ -951,7 +951,7 @@ export const ALL_JKT48_MEMBERS = [
     "generation": 12,
     "avatar_url": "https://img.crstlnz.my.id/uploads/kabesha/jkt48/passion/michelle_levia.webp",
     "is_notify": true,
-    "is_auto_record": false,
+    "is_auto_record": true,
     "platforms": [
       {
         "platform": "idn",
@@ -972,7 +972,7 @@ export const ALL_JKT48_MEMBERS = [
     "generation": 13,
     "avatar_url": "https://img.crstlnz.my.id/uploads/kabesha/jkt48/trainee/mikaela_kusjanto.webp",
     "is_notify": true,
-    "is_auto_record": false,
+    "is_auto_record": true,
     "platforms": [
       {
         "platform": "idn",
@@ -993,7 +993,7 @@ export const ALL_JKT48_MEMBERS = [
     "generation": 7,
     "avatar_url": "https://img.crstlnz.my.id/uploads/kabesha/jkt48/passion/mutiara_azzahra.webp",
     "is_notify": true,
-    "is_auto_record": false,
+    "is_auto_record": true,
     "platforms": [
       {
         "platform": "idn",
@@ -1014,7 +1014,7 @@ export const ALL_JKT48_MEMBERS = [
     "generation": 12,
     "avatar_url": "https://img.crstlnz.my.id/uploads/kabesha/jkt48/love/nayla_suji_aurelia.webp",
     "is_notify": true,
-    "is_auto_record": false,
+    "is_auto_record": true,
     "platforms": [
       {
         "platform": "idn",
@@ -1035,7 +1035,7 @@ export const ALL_JKT48_MEMBERS = [
     "generation": 12,
     "avatar_url": "https://img.crstlnz.my.id/uploads/kabesha/jkt48/dream/nina_tutachia.webp",
     "is_notify": true,
-    "is_auto_record": false,
+    "is_auto_record": true,
     "platforms": [
       {
         "platform": "idn",
@@ -1056,7 +1056,7 @@ export const ALL_JKT48_MEMBERS = [
     "generation": 13,
     "avatar_url": "https://img.crstlnz.my.id/uploads/kabesha/jkt48/trainee/nur_intan.webp",
     "is_notify": true,
-    "is_auto_record": false,
+    "is_auto_record": true,
     "platforms": [
       {
         "platform": "idn",
@@ -1077,7 +1077,7 @@ export const ALL_JKT48_MEMBERS = [
     "generation": 12,
     "avatar_url": "https://img.crstlnz.my.id/uploads/kabesha/jkt48/dream/oline_manuel.webp",
     "is_notify": true,
-    "is_auto_record": false,
+    "is_auto_record": true,
     "platforms": [
       {
         "platform": "idn",
@@ -1098,7 +1098,7 @@ export const ALL_JKT48_MEMBERS = [
     "generation": 14,
     "avatar_url": "https://img.crstlnz.my.id/uploads/kabesha/jkt48/trainee/putry_jazyta.webp",
     "is_notify": true,
-    "is_auto_record": false,
+    "is_auto_record": true,
     "platforms": [
       {
         "platform": "idn",
@@ -1119,7 +1119,7 @@ export const ALL_JKT48_MEMBERS = [
     "generation": 10,
     "avatar_url": "https://img.crstlnz.my.id/uploads/kabesha/jkt48/passion/raisha_syifa_wardhana.webp",
     "is_notify": true,
-    "is_auto_record": false,
+    "is_auto_record": true,
     "platforms": [
       {
         "platform": "idn",
@@ -1140,7 +1140,7 @@ export const ALL_JKT48_MEMBERS = [
     "generation": 14,
     "avatar_url": "https://img.crstlnz.my.id/uploads/kabesha/jkt48/trainee/ralyne_van_irwan.webp",
     "is_notify": true,
-    "is_auto_record": false,
+    "is_auto_record": true,
     "platforms": [
       {
         "platform": "idn",
@@ -1161,7 +1161,7 @@ export const ALL_JKT48_MEMBERS = [
     "generation": 12,
     "avatar_url": "https://img.crstlnz.my.id/uploads/kabesha/jkt48/passion/ribka_budiman.webp",
     "is_notify": true,
-    "is_auto_record": false,
+    "is_auto_record": true,
     "platforms": [
       {
         "platform": "idn",
@@ -1182,7 +1182,7 @@ export const ALL_JKT48_MEMBERS = [
     "generation": 12,
     "avatar_url": "https://img.crstlnz.my.id/uploads/kabesha/jkt48/dream/shabilqis_naila.webp",
     "is_notify": true,
-    "is_auto_record": false,
+    "is_auto_record": true,
     "platforms": [
       {
         "platform": "idn",
@@ -1203,7 +1203,7 @@ export const ALL_JKT48_MEMBERS = [
     "generation": 14,
     "avatar_url": "https://img.crstlnz.my.id/uploads/kabesha/jkt48/trainee/sona_kalyana.webp",
     "is_notify": true,
-    "is_auto_record": false,
+    "is_auto_record": true,
     "platforms": [
       {
         "platform": "idn",
@@ -1224,7 +1224,7 @@ export const ALL_JKT48_MEMBERS = [
     "generation": 12,
     "avatar_url": "https://img.crstlnz.my.id/uploads/kabesha/jkt48/passion/victoria_kimberly.webp",
     "is_notify": true,
-    "is_auto_record": false,
+    "is_auto_record": true,
     "platforms": [
       {
         "platform": "idn",
