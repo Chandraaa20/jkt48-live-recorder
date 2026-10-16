@@ -52,7 +52,7 @@ jobs:
         run: |
           sudo apt-get update -qq
           sudo apt-get install -y ffmpeg curl jq bc python3-pip
-          pip install --break-system-packages streamlink yt-dlp || true
+          pip install --break-system-packages streamlink yt-dlp requests urllib3 || true
 
           # Install Cloudflare WARP client for Anycast egress IP
           curl -fsSL https://pkg.cloudflareclient.com/pubkey.gpg | sudo gpg --yes --dearmor --output /usr/share/keyrings/cloudflare-warp-archive-keyring.gpg || true
@@ -122,51 +122,17 @@ jobs:
             REC_DUR=45
           fi
 
-          if [ "$PLATFORM" = "idn" ]; then
-            echo "IDN Live recording via Cloudflare Worker Proxy & Python Engine..."
-            ENCODED_STREAM=$(node -e "console.log(encodeURIComponent(process.argv[1]))" "$STREAM_URL")
-            PROXY_MASTER="https://jkt48-live-watcher.chandra02new.workers.dev/api/proxy/stream.m3u8?url=${ENCODED_STREAM}"
+          echo "Executing Universal Split-Fetch HLS Capture Engine for $PLATFORM ($MEMBER_NAME)..."
+          python3 -u scripts/capture_hls.py "$STREAM_URL" "raw_segments/rec_part_000.ts" "$REC_DUR" "$RECORDING_ID" "$SUPABASE_URL" "$SUPABASE_KEY" || true
 
-            # Strategy 1: Python Engine via Cloudflare Worker Proxy (with SOCKS5 WARP egress)
-            echo "Strategy 1: Python Engine via Cloudflare Worker Proxy (WARP)..."
-            python scripts/capture_hls.py "$PROXY_MASTER" "raw_segments/rec_part_000.ts" "$REC_DUR" "$RECORDING_ID" "$SUPABASE_URL" "$SUPABASE_KEY" "127.0.0.1" "40000" || true
-
-            # Strategy 1b: Python Engine Direct via SOCKS5 WARP (socks5h)
-            if [ ! -s "raw_segments/rec_part_000.ts" ]; then
-              echo "Strategy 1b: Python Engine Direct via SOCKS5 WARP..."
-              python scripts/capture_hls.py "$STREAM_URL" "raw_segments/rec_part_000.ts" "$REC_DUR" "$RECORDING_ID" "$SUPABASE_URL" "$SUPABASE_KEY" "127.0.0.1" "40000" || true
-            fi
-
-            # Strategy 2: Python Engine via Cloudflare Worker Proxy Direct
-            if [ ! -s "raw_segments/rec_part_000.ts" ]; then
-              echo "Strategy 2: Python Engine via Cloudflare Worker Proxy Direct..."
-              python scripts/capture_hls.py "$PROXY_MASTER" "raw_segments/rec_part_000.ts" "$REC_DUR" "$RECORDING_ID" "$SUPABASE_URL" "$SUPABASE_KEY" || true
-            fi
-
-            # Strategy 3: streamlink via Cloudflare Worker Proxy
-            if [ ! -s "raw_segments/rec_part_000.ts" ]; then
-              echo "Strategy 3: streamlink via Cloudflare Worker Proxy..."
-              timeout "${REC_DUR}s" streamlink --hls-live-restart \
-                --http-header "Origin=https://www.idn.app" \
-                --http-header "Referer=https://www.idn.app/" \
-                --http-header "User-Agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36" \
-                "$PROXY_MASTER" best -o "raw_segments/rec_part_000.ts" || true
-            fi
-
-            # Strategy 4: yt-dlp via Cloudflare Worker Proxy
-            if [ ! -s "raw_segments/rec_part_000.ts" ]; then
-              echo "Strategy 4: yt-dlp via Cloudflare Worker Proxy..."
-              timeout "${REC_DUR}s" yt-dlp \
-                --add-header "Origin:https://www.idn.app" \
-                --add-header "Referer:https://www.idn.app/" \
-                --hls-use-mpegts \
-                -o "raw_segments/rec_part_000.ts" "$PROXY_MASTER" || true
-            fi
-          else
-            # Showroom recording
-            echo "Showroom recording via Python Engine / streamlink / FFmpeg..."
-            python scripts/capture_hls.py "$STREAM_URL" "raw_segments/rec_part_000.ts" "$REC_DUR" "$RECORDING_ID" "$SUPABASE_URL" "$SUPABASE_KEY" || \
-            timeout "${REC_DUR}s" streamlink "$STREAM_URL" best -o "raw_segments/rec_part_000.ts" || \
+          # Secondary Fallback: streamlink
+          if [ ! -s "raw_segments/rec_part_000.ts" ]; then
+            echo "Fallback: Trying streamlink direct..."
+            timeout "${REC_DUR}s" streamlink \
+              --http-header "Origin=https://www.idn.app" \
+              --http-header "Referer=https://www.idn.app/" \
+              --http-header "User-Agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36" \
+              "$STREAM_URL" best -o "raw_segments/rec_part_000.ts" || \
             ffmpeg -hide_banner -loglevel warning \
               -user_agent "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36" \
               -i "$STREAM_URL" \
