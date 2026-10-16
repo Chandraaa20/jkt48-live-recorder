@@ -32,6 +32,8 @@ jobs:
     name: Record and Archive Live Stream
     runs-on: ubuntu-latest
     timeout-minutes: 360 # Up to 6 hours max live recording
+    env:
+      TZ: Asia/Jakarta
 
     # Local Telegram Bot API Server enabling full 2000MB (2GB) direct file uploads
     services:
@@ -117,10 +119,9 @@ jobs:
 
           mkdir -p raw_segments
 
-          REC_DUR="${DURATION:-45}"
-          if [ "$REC_DUR" -eq 0 ] 2>/dev/null; then
-            REC_DUR=45
-          fi
+          # Zero is intentional: capture until the app changes the recording
+          # status to uploading.  Never convert a real live into 45-second clips.
+          REC_DUR="${DURATION:-0}"
 
           echo "Executing Universal Split-Fetch HLS Capture Engine for $PLATFORM ($MEMBER_NAME)..."
           python3 -u scripts/capture_hls.py "$STREAM_URL" "raw_segments/rec_part_000.ts" "$REC_DUR" "$RECORDING_ID" "$SUPABASE_URL" "$SUPABASE_KEY" || true
@@ -128,7 +129,11 @@ jobs:
           # Secondary Fallback: streamlink
           if [ ! -s "raw_segments/rec_part_000.ts" ]; then
             echo "Fallback: Trying streamlink direct..."
-            timeout "${REC_DUR}s" streamlink \
+            FALLBACK_TIMEOUT="$REC_DUR"
+            if [ "$FALLBACK_TIMEOUT" -eq 0 ] 2>/dev/null; then FALLBACK_TIMEOUT=21600; fi
+            DURATION_ARGS=()
+            if [ "$REC_DUR" -gt 0 ] 2>/dev/null; then DURATION_ARGS=(-t "$REC_DUR"); fi
+            timeout "${FALLBACK_TIMEOUT}s" streamlink \
               --http-header "Origin=https://www.idn.app" \
               --http-header "Referer=https://www.idn.app/" \
               --http-header "User-Agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36" \
@@ -137,7 +142,7 @@ jobs:
               -user_agent "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36" \
               -i "$STREAM_URL" \
               -c copy \
-              -t "$REC_DUR" \
+              "${DURATION_ARGS[@]}" \
               "raw_segments/rec_part_000.ts" || true
           fi
 
@@ -249,7 +254,9 @@ jobs:
           for vid in "${VIDEO_FILES[@]}"; do
             VID_BYTES=$(stat -c%s "$vid")
             VID_MB=$(awk "BEGIN {printf \"%.2f\", $VID_BYTES / 1048576}")
-            CAPTION="🎬 <b>${MEMBER_NAME} - Live Recording</b>%0A📱 Platform: <b>${PLATFORM^^}</b>%0A📦 <b>Part ${CURR_NUM}/${TOTAL_FILES}</b> (${VID_MB} MB)%0A⏱️ Durasi: <b>${TOTAL_DURATION} detik</b>%0A📅 $(date '+%d %B %Y - %H:%M WIB')"
+            PART_LABEL=""
+            if [ "$TOTAL_FILES" -gt 1 ]; then PART_LABEL="%0A📦 <b>Bagian ${CURR_NUM}/${TOTAL_FILES}</b>"; fi
+            CAPTION="🎬 <b>${MEMBER_NAME} — Rekaman Live</b>%0A📱 Platform: <b>${PLATFORM^^}</b>${PART_LABEL}%0A📦 Ukuran: <b>${VID_MB} MB</b>%0A⏱️ Durasi: <b>${TOTAL_DURATION} detik</b>%0A📅 $(TZ=Asia/Jakarta date '+%d %B %Y - %H:%M WIB')"
 
             # If within single file upload limit
             if [ "$VID_BYTES" -le "$MAX_UPLOAD_BYTES" ]; then

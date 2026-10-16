@@ -289,6 +289,15 @@ class SupabaseWorkerClient {
     });
   }
 
+  // Atomically claim a session. Only the request which changes false -> true
+  // may create a recording and dispatch GitHub Actions.
+  async claimRecording(id) {
+    return this.request(`active_lives?id=eq.${id}&is_recording=eq.false`, {
+      method: 'PATCH',
+      body: JSON.stringify({ is_recording: true }),
+    });
+  }
+
   async deleteActiveLive(id) {
     return this.request(`active_lives?id=eq.${id}`, {
       method: 'DELETE',
@@ -429,7 +438,7 @@ export async function processLiveStreams(env) {
             `📺 <b>Platform:</b> ${stream.platform.toUpperCase()}\n` +
             `📝 <b>Judul:</b> ${stream.title}\n` +
             `⏺️ <b>Cloud Recording:</b> ${autoRecTxt}\n` +
-            `⏰ <b>Mulai:</b> ${new Date(newLivePayload.started_at).toISOString()}\n\n` +
+          `⏰ <b>Mulai:</b> ${new Intl.DateTimeFormat('id-ID', { timeZone: 'Asia/Jakarta', dateStyle: 'medium', timeStyle: 'short' }).format(new Date(newLivePayload.started_at))} WIB\n\n` +
             `<i>Notifikasi otomatis dari Cloudflare Worker JKT48 Watcher.</i>`;
 
           const photoUrl = newLivePayload.thumbnail_url || member.avatar_url;
@@ -472,11 +481,11 @@ export async function processLiveStreams(env) {
 
     // 5. Selective Auto-Record Logic:
     // If member has is_auto_record === true AND active_lives.is_recording === false
-    if (member.is_auto_record && !activeLiveRecord.is_recording) {
+    if (member.is_auto_record) {
+      // This conditional update is the cross-cron / cross-request lock.
+      const claimed = await supabase.claimRecording(activeLiveRecord.id);
+      if (!claimed || claimed.length === 0) continue;
       const recordingId = crypto.randomUUID();
-
-      // a. Mark is_recording = true on active_lives
-      await supabase.updateActiveLive(activeLiveRecord.id, { is_recording: true });
 
       // b. Insert new row in recordings table
       await supabase.createRecording({
@@ -778,19 +787,8 @@ export default {
           }
         }
 
-        // Cancel workflow run on GitHub Actions (graceful stop & trigger remux/upload)
-        if (runId && env.GITHUB_TOKEN) {
-          await fetch(`https://api.github.com/repos/${repo}/actions/runs/${runId}/cancel`, {
-            method: 'POST',
-            headers: {
-              'Authorization': `Bearer ${env.GITHUB_TOKEN}`,
-              'Accept': 'application/vnd.github.v3+json',
-              'User-Agent': 'JKT48-Cloudflare-Worker/1.0',
-            },
-          }).catch(() => null);
-        }
-
-        // Mark as 'uploading' in Supabase so UI shows progress while GitHub Actions remuxes & uploads
+        // Mark as uploading. capture_hls polls this state and exits cleanly,
+        // allowing remux/upload instead of cancelling the runner mid-stream.
         if (recordingId && env.SUPABASE_URL && (env.SUPABASE_SERVICE_ROLE_KEY || env.SUPABASE_ANON_KEY)) {
           const supabase = new SupabaseWorkerClient(
             env.SUPABASE_URL,
@@ -810,9 +808,8 @@ export default {
         );
       }
 
-      // 3. Default: Process Live Streams & Return Health Status
-      const result = await processLiveStreams(env);
-      return new Response(JSON.stringify(result, null, 2), {
+      // 3. Health endpoint must be read-only. Scheduled Worker cron owns mutation.
+      return new Response(JSON.stringify({ status: 'ok', timestamp: new Date().toISOString() }, null, 2), {
         status: 200,
         headers: {
           'Content-Type': 'application/json',

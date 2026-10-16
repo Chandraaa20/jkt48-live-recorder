@@ -16,7 +16,6 @@ import {
   deleteMember,
   seedInitialMembers,
   getActiveLives,
-  syncRealActiveLives,
   triggerManualRecord,
   getRecordings,
   finishRecording,
@@ -70,7 +69,7 @@ export default function App() {
   const [memberToEdit, setMemberToEdit] = useState(null);
   const [isSeeding, setIsSeeding] = useState(false);
 
-  // Fetch all data (Real-Time JKT48 Active Lives)
+  // The browser is an observer. Cloudflare Worker is the sole live dispatcher.
   const loadAllData = useCallback(async (silent = false) => {
     if (!silent) setIsRefreshing(true);
     try {
@@ -79,7 +78,7 @@ export default function App() {
 
       const [membersData, livesData, recordingsData] = await Promise.all([
         getMembers(),
-        syncRealActiveLives(),
+        getActiveLives(),
         getRecordings(),
       ]);
 
@@ -111,9 +110,9 @@ export default function App() {
       },
     });
 
-    // Real-Time JKT48 Live Sync every 60 seconds
+    // Refresh the Worker-owned state; never create notifications or recordings here.
     const liveSyncInterval = setInterval(() => {
-      syncRealActiveLives().then(setActiveLives).catch(console.error);
+      getActiveLives().then(setActiveLives).catch(console.error);
     }, 60000);
 
     return () => {
@@ -122,10 +121,10 @@ export default function App() {
     };
   }, [loadAllData]);
 
-  // Sync real-time lives automatically whenever user switches to "Sedang Live" tab
+  // Refresh only when entering the live tab.
   useEffect(() => {
     if (currentTab === TABS.LIVE) {
-      syncRealActiveLives().then(setActiveLives).catch(console.error);
+      getActiveLives().then(setActiveLives).catch(console.error);
     }
   }, [currentTab]);
 

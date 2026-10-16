@@ -1,9 +1,8 @@
 name: JKT48 24/7 Cloud Live Watcher & Auto-Record Dispatcher
 
 on:
-  schedule:
-    # Run every 5 minutes 24/7 automatically in GitHub Actions cloud
-    - cron: '*/5 * * * *'
+  # Cloudflare Worker cron is the sole automatic dispatcher.  Keep this
+  # workflow for explicit diagnostics only, so it cannot double-dispatch.
   workflow_dispatch:
     # Allows manual testing trigger from GitHub Actions tab
 

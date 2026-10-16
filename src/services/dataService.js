@@ -418,6 +418,10 @@ export async function getActiveLives() {
  * Matches with registered members and updates Supabase active_lives
  */
 export async function syncRealActiveLives() {
+  // Live discovery and dispatch are Worker-owned. Keeping this compatibility
+  // export read-only prevents any future browser caller from duplicating alerts.
+  return getActiveLives();
+
   const supabase = getSupabaseClient();
   const currentMembers = await getMembers();
 
@@ -585,6 +589,20 @@ export async function triggerManualRecord(liveId, memberId, liveTitle, platform,
   const supabase = getSupabaseClient();
   const recordingId = crypto.randomUUID();
 
+  // Atomic false -> true claim: a second tab/device must not create another run.
+  if (supabase) {
+    const { data: claimed, error: claimError } = await supabase
+      .from('active_lives')
+      .update({ is_recording: true })
+      .eq('id', liveId)
+      .eq('is_recording', false)
+      .select('id');
+    if (claimError) return { success: false, error: claimError.message };
+    if (!claimed || claimed.length === 0) {
+      return { success: false, error: 'Sesi ini sudah sedang direkam oleh perangkat atau worker lain.' };
+    }
+  }
+
   // 1. Local storage update
   const lives = getLocalData(LOCAL_STORAGE_LIVES, INITIAL_ACTIVE_LIVES);
   const updatedLives = lives.map((l) =>
@@ -607,15 +625,13 @@ export async function triggerManualRecord(liveId, memberId, liveTitle, platform,
   recordings.unshift(newRec);
   setLocalData(LOCAL_STORAGE_RECORDINGS, recordings);
 
-  // 2. Dispatch to GitHub Actions Cloud Recorder if configured
-  const githubDispatch = await triggerGitHubRecorder({
-    recording_id: recordingId,
-    member_name: memberName || liveTitle || 'Member JKT48',
-    platform: platform || 'idn',
-    stream_url: streamUrl || '',
-  });
-
   if (!supabase) {
+    const githubDispatch = await triggerGitHubRecorder({
+      recording_id: recordingId,
+      member_name: memberName || liveTitle || 'Member JKT48',
+      platform: platform || 'idn',
+      stream_url: streamUrl || '',
+    });
     return {
       success: true,
       message: githubDispatch.triggered
@@ -626,15 +642,7 @@ export async function triggerManualRecord(liveId, memberId, liveTitle, platform,
   }
 
   try {
-    // Update active_lives
-    const { error: liveErr } = await supabase
-      .from('active_lives')
-      .update({ is_recording: true })
-      .eq('id', liveId);
-
-    if (liveErr) throw liveErr;
-
-    // Insert new recording entry
+    // Persist the row before dispatch, so the runner can update its lifecycle.
     const { error: recErr } = await supabase.from('recordings').insert({
       id: recordingId,
       member_id: memberId,
@@ -647,6 +655,13 @@ export async function triggerManualRecord(liveId, memberId, liveTitle, platform,
     });
 
     if (recErr) throw recErr;
+
+    const githubDispatch = await triggerGitHubRecorder({
+      recording_id: recordingId,
+      member_name: memberName || liveTitle || 'Member JKT48',
+      platform: platform || 'idn',
+      stream_url: streamUrl || '',
+    });
 
     return {
       success: true,

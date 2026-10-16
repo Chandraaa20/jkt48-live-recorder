@@ -312,7 +312,9 @@ async function main() {
     if (isNewLive && live.member.is_notify !== false) {
       const platformName = live.platform.toUpperCase();
       const recStatus = live.member.is_auto_record ? '✅ AKTIF (Auto-Record Dimulai)' : '⏸️ Tidak Aktif';
-      const formattedTime = new Date(live.started_at).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' });
+      const formattedTime = new Date(live.started_at).toLocaleTimeString('id-ID', {
+        timeZone: 'Asia/Jakarta', hour: '2-digit', minute: '2-digit'
+      });
 
       const alertMsg =
         `🔔 <b>JKT48 SEDANG LIVE!</b>\n\n` +
