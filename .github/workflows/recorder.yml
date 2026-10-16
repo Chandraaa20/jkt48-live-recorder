@@ -40,9 +40,9 @@ jobs:
       telegram-bot-api:
         image: aiogram/telegram-bot-api:latest
         env:
-          TELEGRAM_API_ID: ${{ secrets.TELEGRAM_API_ID || '6' }}
-          TELEGRAM_API_HASH: ${{ secrets.TELEGRAM_API_HASH || 'eb06d4abfb49dc3eeb1aeb98ae0f581e' }}
-          TELEGRAM_LOCAL: "1"
+          TELEGRAM_API_ID: ${{ secrets.TELEGRAM_API_ID }}
+          TELEGRAM_API_HASH: ${{ secrets.TELEGRAM_API_HASH }}
+          TELEGRAM_LOCAL: 1
         ports:
           - 8081:8081
 
@@ -120,7 +120,7 @@ jobs:
           mkdir -p raw_segments
 
           # Zero is intentional: capture until the app changes the recording
-          # status to uploading.  Never convert a real live into 45-second clips.
+          # status to uploading. Never convert a real live into 45-second clips.
           REC_DUR="${DURATION:-0}"
 
           echo "Executing Universal Split-Fetch HLS Capture Engine for $PLATFORM ($MEMBER_NAME)..."
@@ -173,39 +173,57 @@ jobs:
 
           echo "HAS_VIDEO=true" >> $GITHUB_ENV
 
+          # Combine all segments into one master .ts stream (lossless MPEG-TS concatenation)
+          if [ "$TOTAL_COUNT" -eq 1 ]; then
+            COMBINED_TS="${VALID_TS[0]}"
+          else
+            echo "Concatenating $TOTAL_COUNT .ts segments into raw_segments/all_combined.ts..."
+            cat "${VALID_TS[@]}" > raw_segments/all_combined.ts
+            COMBINED_TS="raw_segments/all_combined.ts"
+          fi
+
+          # Remux to 100% original MP4 without re-encoding (-c copy -movflags +faststart)
+          FULL_MP4="raw_segments/full_original.mp4"
+          echo "Remuxing $COMBINED_TS to $FULL_MP4 (100% Original, -c copy -movflags +faststart)..."
+          ffmpeg -hide_banner -loglevel error -y -i "$COMBINED_TS" -c copy -movflags +faststart "$FULL_MP4" || cp "$COMBINED_TS" "$FULL_MP4"
+
+          TOTAL_BYTES=$(stat -c%s "$FULL_MP4")
+          SPLIT_LIMIT_BYTES=2044723200 # 1950 MB (~1.95 GB, safely within 2000 MB Telegram Local Bot limit)
+
+          TOTAL_DURATION=$(ffprobe -v error -show_entries format=duration -of default=noprint_wrappers=1:nokey=1 "$FULL_MP4" 2>/dev/null | cut -d'.' -f1)
+          if [ -z "$TOTAL_DURATION" ] || [ "$TOTAL_DURATION" -le 0 ] 2>/dev/null; then
+            TOTAL_DURATION=60
+          fi
+
+          # Aturan 1 Video Full (<= 1950 MB) vs Smart Split (> 1950 MB)
+          if [ "$TOTAL_BYTES" -le "$SPLIT_LIMIT_BYTES" ]; then
+            echo "Video size ($(( TOTAL_BYTES / 1048576 )) MB) <= 1950 MB: Preserving as ONE single full video."
+            mv "$FULL_MP4" "processed_videos/${BASE_PREFIX}.mp4"
+          else
+            echo "Video size ($(( TOTAL_BYTES / 1048576 )) MB) > 1950 MB: Applying Smart Split into ~1.95 GB parts (-c copy)..."
+            SEG_TIME=$(( (1900 * 1024 * 1024 * TOTAL_DURATION) / TOTAL_BYTES ))
+            if [ "$SEG_TIME" -le 30 ]; then SEG_TIME=600; fi
+            ffmpeg -hide_banner -loglevel error -y -i "$FULL_MP4" -c copy -map 0 -f segment -segment_time "$SEG_TIME" -reset_timestamps 1 "processed_videos/${BASE_PREFIX}_part%02d.mp4"
+            rm -f "$FULL_MP4"
+            for part in processed_videos/*part*.mp4; do
+              ffmpeg -hide_banner -loglevel error -y -i "$part" -c copy -movflags +faststart "${part}.tmp" && mv "${part}.tmp" "$part"
+            done
+          fi
+
           TOTAL_BYTES=0
-          TOTAL_DURATION=0
-          PART_IDX=1
-
-          for ts in "${VALID_TS[@]}"; do
-            MP4_NAME="processed_videos/${BASE_PREFIX}_part$(printf "%02d" $PART_IDX).mp4"
-            echo "Remuxing $ts to $MP4_NAME with faststart..."
-            
-            ffmpeg -hide_banner -loglevel error -i "$ts" -c copy -movflags +faststart "$MP4_NAME" || cp "$ts" "processed_videos/${BASE_PREFIX}_part$(printf "%02d" $PART_IDX).ts"
-            
-            TARGET_FILE="$MP4_NAME"
-            if [ ! -f "$TARGET_FILE" ] || [ ! -s "$TARGET_FILE" ]; then
-              TARGET_FILE="processed_videos/${BASE_PREFIX}_part$(printf "%02d" $PART_IDX).ts"
+          shopt -s nullglob
+          for f in processed_videos/*; do
+            if [ -f "$f" ]; then
+              TOTAL_BYTES=$((TOTAL_BYTES + $(stat -c%s "$f")))
             fi
-
-            FILE_SZ=$(stat -c%s "$TARGET_FILE")
-            TOTAL_BYTES=$((TOTAL_BYTES + FILE_SZ))
-            
-            DUR=$(ffprobe -v error -show_entries format=duration -of default=noprint_wrappers=1:nokey=1 "$TARGET_FILE" 2>/dev/null | cut -d'.' -f1)
-            if [ -n "$DUR" ] && [ "$DUR" -gt 0 ] 2>/dev/null; then
-              TOTAL_DURATION=$((TOTAL_DURATION + DUR))
-            else
-              TOTAL_DURATION=$((TOTAL_DURATION + 60))
-            fi
-            PART_IDX=$((PART_IDX + 1))
           done
 
           FILE_MB=$(awk "BEGIN {printf \"%.2f\", $TOTAL_BYTES / 1048576}")
           echo "TOTAL_DURATION=$TOTAL_DURATION" >> $GITHUB_ENV
           echo "FILE_SIZE_MB=$FILE_MB" >> $GITHUB_ENV
-          echo "Consolidation complete: ${TOTAL_COUNT} part(s), ${TOTAL_DURATION}s duration, ${FILE_MB}MB total."
+          echo "Consolidation complete: ${FILE_MB} MB total, ${TOTAL_DURATION}s duration."
 
-      - name: Upload Video to Telegram (Always Guaranteed Upload)
+      - name: Upload Video to Telegram (Always Guaranteed Upload via Local Bot API 2GB)
         id: upload_telegram
         if: always()
         run: |
@@ -231,17 +249,19 @@ jobs:
             exit 0
           fi
 
-          # Detect if local bot API server on 8081 is active
-          LOCAL_HEALTH=$(curl -s -o /dev/null -w "%{http_code}" http://localhost:8081 || echo "000")
-          if [ "$LOCAL_HEALTH" = "404" ] || [ "$LOCAL_HEALTH" = "200" ]; then
-            echo "Using Local Bot API Server on port 8081 (supports up to 2000MB per file)"
-            TELEGRAM_API_URL="http://localhost:8081/bot${BOT_TOKEN}"
-            MAX_UPLOAD_BYTES=2000000000
-          else
-            echo "Local Bot API unavailable, using standard api.telegram.org (49MB limit)"
-            TELEGRAM_API_URL="https://api.telegram.org/bot${BOT_TOKEN}"
-            MAX_UPLOAD_BYTES=49000000
-          fi
+          # Wait for Local Bot API server on port 8081
+          echo "Connecting to Local Bot API Server on 127.0.0.1:8081..."
+          for i in {1..30}; do
+            HEALTH=$(curl -s -o /dev/null -w "%{http_code}" http://127.0.0.1:8081 || echo "000")
+            if [ "$HEALTH" = "404" ] || [ "$HEALTH" = "200" ]; then
+              echo "Local Bot API Server on port 8081 is ready (HTTP $HEALTH)."
+              break
+            fi
+            sleep 1
+          done
+
+          TELEGRAM_API_URL="http://127.0.0.1:8081/bot${BOT_TOKEN}"
+          echo "Using Local Bot API Server on port 8081 (supports up to 2000MB per file): $TELEGRAM_API_URL"
 
           shopt -s nullglob
           VIDEO_FILES=(processed_videos/*)
@@ -258,50 +278,27 @@ jobs:
             if [ "$TOTAL_FILES" -gt 1 ]; then PART_LABEL="%0A📦 <b>Bagian ${CURR_NUM}/${TOTAL_FILES}</b>"; fi
             CAPTION="🎬 <b>${MEMBER_NAME} — Rekaman Live</b>%0A📱 Platform: <b>${PLATFORM^^}</b>${PART_LABEL}%0A📦 Ukuran: <b>${VID_MB} MB</b>%0A⏱️ Durasi: <b>${TOTAL_DURATION} detik</b>%0A📅 $(TZ=Asia/Jakarta date '+%d %B %Y - %H:%M WIB')"
 
-            # If within single file upload limit
-            if [ "$VID_BYTES" -le "$MAX_UPLOAD_BYTES" ]; then
-              echo "Uploading $vid (${VID_MB} MB) directly..."
-              RESPONSE=$(curl -s -F "chat_id=${CHAT_ID}" \
-                -F "video=@${vid}" \
-                -F "caption=${CAPTION}" \
-                -F "parse_mode=HTML" \
-                -F "supports_streaming=true" \
-                "${TELEGRAM_API_URL}/sendVideo")
+            echo "Uploading $vid (${VID_MB} MB) to Telegram via Local Bot API 8081..."
+            RESPONSE=$(curl -s --max-time 1800 \
+              -F "chat_id=${CHAT_ID}" \
+              -F "video=@${vid}" \
+              -F "caption=${CAPTION}" \
+              -F "parse_mode=HTML" \
+              -F "supports_streaming=true" \
+              "${TELEGRAM_API_URL}/sendVideo")
 
-              IS_OK=$(echo "$RESPONSE" | jq -r '.ok')
-              if [ "$IS_OK" = "true" ]; then
-                MSG_ID=$(echo "$RESPONSE" | jq -r '.result.message_id')
-                if [[ "$CHAT_ID" =~ ^-100 ]]; then
-                  CLEAN_CHAT=$(echo "$CHAT_ID" | sed 's/^-100//')
-                  LAST_MSG_LINK="https://t.me/c/${CLEAN_CHAT}/${MSG_ID}"
-                else
-                  LAST_MSG_LINK="https://t.me/${CHAT_ID}/${MSG_ID}"
-                fi
-                echo "Part $CURR_NUM uploaded successfully: $LAST_MSG_LINK"
+            IS_OK=$(echo "$RESPONSE" | jq -r '.ok')
+            if [ "$IS_OK" = "true" ]; then
+              MSG_ID=$(echo "$RESPONSE" | jq -r '.result.message_id')
+              if [[ "$CHAT_ID" =~ ^-100 ]]; then
+                CLEAN_CHAT=$(echo "$CHAT_ID" | sed 's/^-100//')
+                LAST_MSG_LINK="https://t.me/c/${CLEAN_CHAT}/${MSG_ID}"
               else
-                echo "Telegram sendVideo error: $RESPONSE"
+                LAST_MSG_LINK="https://t.me/${CHAT_ID}/${MSG_ID}"
               fi
+              echo "Part $CURR_NUM uploaded successfully: $LAST_MSG_LINK"
             else
-              # Exceeds limit -> split into 45MB chunks
-              echo "File $vid exceeds $MAX_UPLOAD_BYTES bytes. Auto-splitting..."
-              mkdir -p subparts
-              ffmpeg -i "$vid" -c copy -map 0 -f segment -segment_time 600 -reset_timestamps 1 subparts/sub_%03d.mp4
-              SUB_FILES=(subparts/*.mp4)
-              SUB_TOTAL=${#SUB_FILES[@]}
-              SUB_NUM=1
-              for s in "${SUB_FILES[@]}"; do
-                SUB_MB=$(awk "BEGIN {printf \"%.2f\", $(stat -c%s "$s") / 1048576}")
-                SUB_CAPTION="${CAPTION}%0A🔹 <i>Sub-part ${SUB_NUM}/${SUB_TOTAL}</i> (${SUB_MB} MB)"
-                RESP=$(curl -s -F "chat_id=${CHAT_ID}" \
-                  -F "video=@${s}" \
-                  -F "caption=${SUB_CAPTION}" \
-                  -F "parse_mode=HTML" \
-                  -F "supports_streaming=true" \
-                  "${TELEGRAM_API_URL}/sendVideo")
-                SUB_NUM=$((SUB_NUM + 1))
-                sleep 1
-              done
-              rm -rf subparts
+              echo "Telegram sendVideo error: $RESPONSE"
             fi
 
             CURR_NUM=$((CURR_NUM + 1))
