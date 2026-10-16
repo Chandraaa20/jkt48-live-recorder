@@ -210,6 +210,25 @@ def check_supabase_stop(supabase_url, supabase_key, recording_id):
         pass
     return False
 
+def report_supabase_progress(supabase_url, supabase_key, recording_id, total_bytes, elapsed):
+    """Publish only measured runner progress; the UI must never invent values."""
+    if not supabase_url or not supabase_key or not recording_id:
+        return
+    try:
+        url = f"{supabase_url.rstrip('/')}/rest/v1/recordings?id=eq.{recording_id}"
+        requests.patch(url, headers={
+            'apikey': supabase_key,
+            'Authorization': f'Bearer {supabase_key}',
+            'Content-Type': 'application/json',
+        }, json={
+            'status': 'recording',
+            'file_size_mb': round(total_bytes / (1024 * 1024), 2),
+            'duration_seconds': max(0, int(elapsed)),
+        }, timeout=4)
+    except Exception:
+        # Progress reporting must never interrupt a valid capture.
+        pass
+
 def main():
     stream_url = sys.argv[1] if len(sys.argv) > 1 else ''
     output_path = sys.argv[2] if len(sys.argv) > 2 else 'raw_segments/rec_part_000.ts'
@@ -273,6 +292,7 @@ def main():
     total_segments = 0
     start_time = time.time()
     last_supabase_check = 0
+    last_progress_report = 0
 
     with open(output_path, 'wb') as out_f:
         while True:
@@ -318,6 +338,9 @@ def main():
                                 total_segments += 1
                                 mb = total_bytes / (1024 * 1024)
                                 print(f"[CaptureHLS] Segment {total_segments} ({seg_size/1024:.1f} KB) | Total: {mb:.2f} MB | Elapsed: {elapsed:.0f}s")
+                                if time.time() - last_progress_report >= 10:
+                                    report_supabase_progress(supabase_url, supabase_key, recording_id, total_bytes, elapsed)
+                                    last_progress_report = time.time()
             except Exception as pe:
                 print(f"[CaptureHLS] Playlist poll error: {pe}")
 

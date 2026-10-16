@@ -631,6 +631,7 @@ export async function triggerManualRecord(liveId, memberId, liveTitle, platform,
       member_name: memberName || liveTitle || 'Member JKT48',
       platform: platform || 'idn',
       stream_url: streamUrl || '',
+      live_id: liveId,
     });
     return {
       success: true,
@@ -661,6 +662,7 @@ export async function triggerManualRecord(liveId, memberId, liveTitle, platform,
       member_name: memberName || liveTitle || 'Member JKT48',
       platform: platform || 'idn',
       stream_url: streamUrl || '',
+      live_id: liveId,
     });
 
     return {

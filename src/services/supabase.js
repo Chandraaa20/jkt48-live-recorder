@@ -266,8 +266,8 @@ export async function triggerCloudflareWorker(customUrl) {
 }
 
 // Trigger GitHub Actions Cloud Recorder (Prioritize Cloudflare Worker Proxy for Security, Fallback to Local PAT)
-export async function triggerGitHubRecorder({ recording_id, member_name, platform, stream_url }) {
-  const { workerUrl, githubToken, githubRepo } = getAppConfig();
+export async function triggerGitHubRecorder({ recording_id, member_name, platform, stream_url, live_id }) {
+  const { workerUrl } = getAppConfig();
 
   // 1. Primary Route: Cloudflare Worker Secure Proxy (Zero token exposure)
   if (workerUrl) {
@@ -284,6 +284,7 @@ export async function triggerGitHubRecorder({ recording_id, member_name, platfor
           member_name,
           platform,
           stream_url,
+          live_id,
         }),
       });
 
@@ -299,50 +300,9 @@ export async function triggerGitHubRecorder({ recording_id, member_name, platfor
     }
   }
 
-  // 2. Fallback Route: Direct GitHub Actions repository_dispatch if user provided token
-  if (githubToken && githubRepo) {
-    try {
-      const res = await fetch(`https://api.github.com/repos/${githubRepo}/dispatches`, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${githubToken}`,
-          'Accept': 'application/vnd.github.v3+json',
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          event_type: 'start_recording',
-          client_payload: {
-            recording_id,
-            member_name,
-            platform,
-            stream_url,
-          },
-        }),
-      });
-
-      if (res.status === 204 || res.ok) {
-        return {
-          triggered: true,
-          message: 'GitHub Actions Cloud Recorder berhasil dipicu di cloud (Direct PAT)!',
-        };
-      } else {
-        const err = await res.text();
-        return {
-          triggered: false,
-          message: `Gagal memicu GitHub Actions [${res.status}]: ${err}`,
-        };
-      }
-    } catch (err) {
-      return {
-        triggered: false,
-        message: `Koneksi ke GitHub API gagal: ${err.message}`,
-      };
-    }
-  }
-
   return {
     triggered: false,
-    message: 'Worker URL atau GitHub PAT belum dikonfigurasi (Perekaman dicatat di database lokal/Supabase).',
+    message: 'Worker tidak dapat memicu perekaman. GitHub PAT tidak pernah dikirim dari aplikasi klien.',
   };
 }
 

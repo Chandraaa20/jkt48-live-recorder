@@ -694,6 +694,14 @@ export default {
         const memberName = body.member_name || 'Member JKT48';
         const platform = body.platform || 'idn';
         const streamUrl = body.stream_url || '';
+        const liveId = body.live_id || '';
+
+        if (!liveId) {
+          return new Response(JSON.stringify({
+            success: false,
+            message: 'live_id wajib ada; klien lama ditolak untuk mencegah dispatch duplikat.',
+          }), { status: 409, headers: { 'Content-Type': 'application/json', ...corsHeaders } });
+        }
 
         if (!env.GITHUB_TOKEN) {
           return new Response(
@@ -736,13 +744,13 @@ export default {
           );
         }
 
-        // Also update active_lives if live_id provided
-        if (body.live_id && env.SUPABASE_URL && (env.SUPABASE_SERVICE_ROLE_KEY || env.SUPABASE_ANON_KEY)) {
+        // The browser has already atomically claimed this exact live session.
+        if (env.SUPABASE_URL && (env.SUPABASE_SERVICE_ROLE_KEY || env.SUPABASE_ANON_KEY)) {
           const supabase = new SupabaseWorkerClient(
             env.SUPABASE_URL,
             env.SUPABASE_SERVICE_ROLE_KEY || env.SUPABASE_ANON_KEY
           );
-          await supabase.updateActiveLive(body.live_id, { is_recording: true }).catch(() => null);
+          await supabase.updateActiveLive(liveId, { is_recording: true }).catch(() => null);
         }
 
         return new Response(

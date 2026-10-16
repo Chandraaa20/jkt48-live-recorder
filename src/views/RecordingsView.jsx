@@ -215,11 +215,11 @@ export default function RecordingsView({
                         <div className="flex items-center space-x-3 text-[11px] text-[#6D655F] mt-1.5">
                           <div className="flex items-center space-x-1 font-medium">
                             <Clock className="w-3.5 h-3.5 text-[#3D5E52]" />
-                            <span>{formatDuration(rec.duration_seconds || 120)}</span>
+                              <span>{rec.duration_seconds ? formatDuration(rec.duration_seconds) : 'Menunggu data runner…'}</span>
                           </div>
                           <div className="flex items-center space-x-1 font-medium">
                             <HardDrive className="w-3.5 h-3.5 text-[#8A8179]" />
-                            <span>{rec.file_size_mb || 45.2} MB</span>
+                              <span>{Number(rec.file_size_mb || 0) > 0 ? `${rec.file_size_mb} MB` : 'Menghitung…'}</span>
                           </div>
                         </div>
                       </div>
