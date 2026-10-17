@@ -365,3 +365,14 @@ export const Share2 = createIcon(
     <line x1="15.41" y1="6.51" x2="8.59" y2="10.49" />
   </>
 );
+
+export const ChevronLeft = createIcon(
+  <path d="m15 18-6-6 6-6" />
+);
+
+export const ArrowLeft = createIcon(
+  <>
+    <path d="m12 19-7-7 7-7" />
+    <path d="M19 12H5" />
+  </>
+);

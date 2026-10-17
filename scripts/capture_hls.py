@@ -311,6 +311,7 @@ def main():
     last_new_segment_time = time.time()
     last_supabase_check = 0
     last_progress_report = 0
+    consecutive_endlist = 0
 
     with open(output_path, 'wb') as out_f:
         while True:
@@ -373,10 +374,19 @@ def main():
                                         report_supabase_progress(supabase_url, supabase_key, recording_id, total_bytes, elapsed)
                                         last_progress_report = time.time()
 
-                    # Check if playlist signals stream termination (#EXT-X-ENDLIST)
+                    # Check if playlist signals stream termination (#EXT-X-ENDLIST) with reconnection grace period
                     if '#EXT-X-ENDLIST' in var_text:
-                        print("[CaptureHLS] #EXT-X-ENDLIST detected in playlist. Stream has completed. Ending capture.")
-                        break
+                        consecutive_endlist += 1
+                        print(f"[CaptureHLS] #EXT-X-ENDLIST detected ({consecutive_endlist}/12). Stream may be reconnecting; grace period active...")
+                        if consecutive_endlist >= 12:
+                            print("[CaptureHLS] #EXT-X-ENDLIST persisted continuously for 35+s. Stream has officially completed. Ending capture.")
+                            break
+                        time.sleep(3)
+                        continue
+                    else:
+                        if consecutive_endlist > 0:
+                            print("[CaptureHLS] Stream reconnected successfully! Resetting ENDLIST grace counter.")
+                        consecutive_endlist = 0
 
             except Exception as pe:
                 print(f"[CaptureHLS] Playlist poll error: {pe}")

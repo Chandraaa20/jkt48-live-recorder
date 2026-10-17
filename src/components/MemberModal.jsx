@@ -58,9 +58,18 @@ export default function MemberModal({ isOpen, onClose, onSave, memberToEdit = nu
         { platform: 'idn', external_id: '', room_url_key: '' },
         { platform: 'showroom', external_id: '', room_url_key: '' },
       ]);
+      setError('');
     }
-    setError('');
   }, [memberToEdit, isOpen]);
+
+  // Handle Android hardware back button & browser back button to close modal first
+  useEffect(() => {
+    if (!isOpen) return;
+    window.history.pushState({ memberModalOpen: true }, '');
+    const handlePopState = () => onClose();
+    window.addEventListener('popstate', handlePopState);
+    return () => window.removeEventListener('popstate', handlePopState);
+  }, [isOpen, onClose]);
 
   if (!isOpen) return null;
 

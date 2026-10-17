@@ -435,3 +435,17 @@ jobs:
               -H "apikey: ${SUPABASE_KEY}" \
               -H "Authorization: Bearer ${SUPABASE_KEY}" || true
           fi
+
+          # Reset active_lives.is_recording for this member so subsequent lives or reconnects (Part 2) can be captured
+          MEMBER_ID_RESP=$(curl -s "${SUPABASE_URL}/rest/v1/recordings?id=eq.${RECORDING_ID}&select=member_id" \
+            -H "apikey: ${SUPABASE_KEY}" \
+            -H "Authorization: Bearer ${SUPABASE_KEY}" || true)
+          REC_MEMBER_ID=$(echo "$MEMBER_ID_RESP" | jq -r '.[0].member_id // empty' 2>/dev/null || echo "")
+          if [ -n "$REC_MEMBER_ID" ]; then
+            echo "Resetting active_lives.is_recording to false for member ${REC_MEMBER_ID}..."
+            curl -s -X PATCH "${SUPABASE_URL}/rest/v1/active_lives?member_id=eq.${REC_MEMBER_ID}" \
+              -H "apikey: ${SUPABASE_KEY}" \
+              -H "Authorization: Bearer ${SUPABASE_KEY}" \
+              -H "Content-Type: application/json" \
+              -d '{"is_recording":false}' || true
+          fi

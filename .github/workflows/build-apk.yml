@@ -35,7 +35,7 @@ jobs:
       - name: Install Dependencies & Capacitor v6
         run: |
           npm install
-          npm install @capacitor/core@^6.0.0 @capacitor/cli@^6.0.0 @capacitor/android@^6.0.0
+          npm install @capacitor/core@^6.0.0 @capacitor/cli@^6.0.0 @capacitor/android@^6.0.0 @capacitor/app@^6.0.0
 
       - name: Build Web Application (Vite)
         env:

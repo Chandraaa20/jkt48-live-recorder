@@ -11,6 +11,7 @@ import {
   ExternalLink,
   AlertCircle,
   CheckCircle2,
+  ChevronLeft,
 } from './Icons';
 
 import { getAppConfig } from '../services/supabase';
@@ -252,6 +253,23 @@ export default function LivePlayerModal({
     };
   }, [isOpen, live]);
 
+  // Handle Android hardware back button & browser back button to close modal first
+  useEffect(() => {
+    if (!isOpen) return;
+
+    window.history.pushState({ liveModalOpen: true }, '');
+
+    const handlePopState = () => {
+      onClose();
+    };
+
+    window.addEventListener('popstate', handlePopState);
+
+    return () => {
+      window.removeEventListener('popstate', handlePopState);
+    };
+  }, [isOpen, onClose]);
+
   if (!isOpen || !live) return null;
 
   const togglePlay = () => {
@@ -314,14 +332,23 @@ export default function LivePlayerModal({
         onClick={(e) => e.stopPropagation()}
       >
         {/* Top bar inside modal */}
-        <div className="px-5 py-3.5 bg-[#FAF8F2] border-b border-[#E8E1D5] flex items-center justify-between">
-          <div className="flex items-center space-x-3 overflow-hidden">
+        <div className="px-4 py-3 bg-[#FAF8F2] border-b border-[#E8E1D5] flex items-center justify-between gap-2.5">
+          <div className="flex items-center space-x-2.5 overflow-hidden flex-1 min-w-0">
+            <button
+              onClick={onClose}
+              data-modal-close="true"
+              className="min-h-[40px] px-2.5 py-1.5 rounded-xl bg-white border border-[#E8E1D5] text-[#2B2522] hover:bg-[#F4EFE7] active:scale-95 transition-all flex items-center gap-1 text-xs font-bold shadow-xs shrink-0"
+              aria-label="Kembali"
+            >
+              <ChevronLeft className="w-4 h-4 text-[#3D5E52]" />
+              <span className="text-[11px] sm:text-xs">Kembali</span>
+            </button>
             <img
               src={member.avatar_url || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&h=100&fit=crop'}
               alt={member.name || 'Member'}
               className="w-9 h-9 rounded-full object-cover border border-[#E8E1D5] shrink-0"
             />
-            <div className="truncate">
+            <div className="truncate flex-1 min-w-0">
               <div className="flex items-center space-x-1.5 flex-wrap">
                 <span className="font-bold text-sm text-[#2B2522] truncate">
                   {member.name || 'JKT48 Member'}
@@ -344,7 +371,8 @@ export default function LivePlayerModal({
 
           <button
             onClick={onClose}
-            className="min-h-[44px] min-w-[44px] flex items-center justify-center rounded-xl text-[#8A8179] hover:text-[#2B2522] hover:bg-[#F4EFE7] transition-colors"
+            data-modal-close="true"
+            className="min-h-[40px] min-w-[40px] flex items-center justify-center rounded-xl text-[#8A8179] hover:text-[#2B2522] hover:bg-[#F4EFE7] transition-colors shrink-0"
             aria-label="Tutup Player"
           >
             <X className="w-5 h-5" />
@@ -370,21 +398,43 @@ export default function LivePlayerModal({
 
           {/* Error fallback overlay */}
           {errorMsg && (
-            <div className="absolute inset-0 p-4 flex flex-col items-center justify-center bg-[#2B2522]/95 text-center space-y-2">
+            <div className="absolute inset-0 p-4 sm:p-6 flex flex-col items-center justify-center bg-[#2B2522]/95 text-center space-y-2.5">
               <AlertCircle className="w-8 h-8 text-[#C94A3D]" />
-              <p className="text-xs text-white max-w-xs">{errorMsg}</p>
-              <button
-                onClick={() => {
-                  setErrorMsg(null);
-                  setIsLoading(true);
-                  if (hlsRef.current) {
-                    hlsRef.current.loadSource(live.stream_url);
+              <div className="max-w-xs space-y-1">
+                <p className="text-xs font-bold text-white">Stream Langsung Terproteksi CDN</p>
+                <p className="text-[11px] text-[#D2C8BF] leading-relaxed">
+                  CDN IDN membatasi player browser mobile. Siaran tetap berjalan lancar dan bisa dibuka langsung:
+                </p>
+              </div>
+
+              <div className="flex flex-col sm:flex-row items-center gap-2 pt-1">
+                <a
+                  href={
+                    live.platform === 'idn'
+                      ? `https://www.idn.app/${live.room_url_key || member.platforms?.find(p => p.platform === 'idn')?.external_id || ''}/live`
+                      : `https://www.showroom-live.com/r/${live.room_url_key || ''}`
                   }
-                }}
-                className="mt-2 px-4 py-2 rounded-xl bg-[#3D5E52] hover:bg-[#314D43] text-xs font-bold text-white transition-colors"
-              >
-                Coba Muat Ulang
-              </button>
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="px-4 py-2 rounded-xl bg-gradient-to-r from-red-600 to-rose-600 hover:from-red-500 hover:to-rose-500 text-xs font-bold text-white transition-all flex items-center gap-1.5 shadow-lg shadow-red-500/25 active:scale-95"
+                >
+                  <ExternalLink className="w-3.5 h-3.5" />
+                  <span>Buka di Web Resmi {live.platform === 'idn' ? 'IDN Live' : 'Showroom'}</span>
+                </a>
+
+                <button
+                  onClick={() => {
+                    setErrorMsg(null);
+                    setIsLoading(true);
+                    if (hlsRef.current) {
+                      hlsRef.current.loadSource(live.stream_url);
+                    }
+                  }}
+                  className="px-3 py-2 rounded-xl bg-white/10 hover:bg-white/20 text-xs font-medium text-white transition-colors"
+                >
+                  Coba Lagi
+                </button>
+              </div>
             </div>
           )}
 

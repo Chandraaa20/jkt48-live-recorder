@@ -30,3 +30,6 @@ android/
 .wrangler/
 cloud-backend/cloudflare-worker/.wrangler/
 scratch/
+__pycache__/
+*.pyc
+

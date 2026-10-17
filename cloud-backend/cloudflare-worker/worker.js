@@ -485,6 +485,20 @@ export async function processLiveStreams(env) {
     // 5. Selective Auto-Record Logic:
     // If member has is_auto_record === true AND active_lives.is_recording === false
     if (member.is_auto_record) {
+      // Self-healing: if active_lives is marked is_recording === true, verify if a recording is still actively in 'recording' status.
+      // If previous recording finished but member is still live, auto-reset is_recording = false so Part 2/subsequent stream can be captured.
+      if (activeLiveRecord && activeLiveRecord.is_recording) {
+        try {
+          const activeRecs = await supabase.request(`recordings?member_id=eq.${member.id}&status=eq.recording&limit=1`);
+          if (!activeRecs || activeRecs.length === 0) {
+            await supabase.updateActiveLive(activeLiveRecord.id, { is_recording: false });
+            activeLiveRecord.is_recording = false;
+          }
+        } catch (healErr) {
+          console.warn('[Worker] Self-healing check error:', healErr.message);
+        }
+      }
+
       // This conditional update is the cross-cron / cross-request lock.
       const claimed = await supabase.claimRecording(activeLiveRecord.id);
       if (!claimed || claimed.length === 0) continue;

@@ -12,8 +12,8 @@ export default function Header({
       <div className="flex items-center justify-between max-w-lg mx-auto bg-white/95 px-4 sm:px-5 py-3 rounded-2xl border border-[#E8E1D5] shadow-[0_2px_12px_-3px_rgba(43,37,34,0.06)]">
         {/* Brand & Logo */}
         <div className="flex items-center space-x-3">
-          <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-[#3D5E52] to-[#4D7566] flex items-center justify-center shadow-md shadow-[#3D5E52]/20 shrink-0">
-            <Radio className="w-4 h-4 text-[#FAF8F2] animate-pulse" />
+          <div className="w-10 h-10 rounded-xl overflow-hidden shadow-md shadow-[#2B2522]/10 border border-[#E8E1D5] bg-[#111] shrink-0 flex items-center justify-center">
+            <img src="/logo.png" alt="JKT48 Live Recorder Logo" className="w-full h-full object-cover" />
           </div>
           <div>
             <div className="flex items-center space-x-1.5">

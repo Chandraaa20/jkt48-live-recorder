@@ -101,6 +101,18 @@ export default function RecordingsView({
     return () => clearInterval(timer);
   }, []);
 
+  // Handle Android hardware back button & browser back button to close recording modals
+  useEffect(() => {
+    if (!selectedRec && !selectedRunning) return;
+    window.history.pushState({ recModalOpen: true }, '');
+    const handlePopState = () => {
+      setSelectedRec(null);
+      setSelectedRunning(null);
+    };
+    window.addEventListener('popstate', handlePopState);
+    return () => window.removeEventListener('popstate', handlePopState);
+  }, [selectedRec, selectedRunning]);
+
   // 2. Light polling to Supabase recordings every 8 seconds when Recordings tab is open
   useEffect(() => {
     if (!onRefreshRecordings) return;

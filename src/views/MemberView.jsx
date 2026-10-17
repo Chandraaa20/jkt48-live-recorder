@@ -45,6 +45,15 @@ export default function MemberView({
   const [feedbackMsg, setFeedbackMsg] = useState(null);
   const [selectedMember, setSelectedMember] = useState(null);
 
+  // Handle Android hardware back button & browser back button to close dossier modal
+  React.useEffect(() => {
+    if (!selectedMember) return;
+    window.history.pushState({ dossierModalOpen: true }, '');
+    const handlePopState = () => setSelectedMember(null);
+    window.addEventListener('popstate', handlePopState);
+    return () => window.removeEventListener('popstate', handlePopState);
+  }, [selectedMember]);
+
   // Filter members based on search and toggle filters
   const filteredMembers = useMemo(() => {
     return members.filter((member) => {
