@@ -171,74 +171,99 @@ export default function MemberView({
         )}
       </div>
 
-      {/* Filter Tabs & Gen Dropdown */}
-      <div className="flex items-center justify-between gap-2 overflow-x-auto pb-1">
-        <div className="flex items-center space-x-1.5">
-          <button
-            onClick={() => setActiveFilter('all')}
-            className={`min-h-[36px] px-3.5 py-1.5 rounded-xl text-xs font-semibold transition-all ${
+      {/* Row 1: Segmented Status Filter Tabs */}
+      <div className="grid grid-cols-3 gap-1.5 p-1 rounded-2xl bg-[#F4EFE7]/80 border border-[#E8E1D5]">
+        <button
+          onClick={() => setActiveFilter('all')}
+          className={`min-h-[38px] px-2 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center justify-center space-x-1.5 ${
+            activeFilter === 'all'
+              ? 'bg-[#3D5E52] text-white shadow-xs'
+              : 'text-[#6D655F] hover:text-[#2B2522]'
+          }`}
+        >
+          <span>Semua</span>
+          <span
+            className={`text-[10px] px-1.5 py-0.2 rounded-full font-bold ${
               activeFilter === 'all'
-                ? 'bg-[#3D5E52] text-white shadow-sm'
-                : 'bg-white border border-[#E8E1D5] text-[#6D655F] hover:text-[#2B2522] hover:bg-[#FAF8F2]'
+                ? 'bg-white/20 text-white'
+                : 'bg-white text-[#6D655F] border border-[#E8E1D5]'
             }`}
           >
-            Semua ({members.length})
-          </button>
+            {members.length}
+          </span>
+        </button>
 
-          <button
-            onClick={() => setActiveFilter('auto_record')}
-            className={`min-h-[36px] px-3.5 py-1.5 rounded-xl text-xs font-semibold flex items-center space-x-1.5 transition-all ${
+        <button
+          onClick={() => setActiveFilter('auto_record')}
+          className={`min-h-[38px] px-2 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center justify-center space-x-1.5 ${
+            activeFilter === 'auto_record'
+              ? 'bg-[#3D5E52] text-white shadow-xs'
+              : 'text-[#6D655F] hover:text-[#2B2522]'
+          }`}
+        >
+          <Video className="w-3.5 h-3.5 shrink-0" />
+          <span>Auto-Rec</span>
+          <span
+            className={`text-[10px] px-1.5 py-0.2 rounded-full font-bold ${
               activeFilter === 'auto_record'
-                ? 'bg-[#3D5E52] text-white shadow-sm'
-                : 'bg-white border border-[#E8E1D5] text-[#6D655F] hover:text-[#2B2522] hover:bg-[#FAF8F2]'
+                ? 'bg-white/20 text-white'
+                : 'bg-white text-[#6D655F] border border-[#E8E1D5]'
             }`}
           >
-            <Video className="w-3.5 h-3.5" />
-            <span>Auto-Rec ({members.filter((m) => m.is_auto_record).length})</span>
-          </button>
+            {members.filter((m) => m.is_auto_record).length}
+          </span>
+        </button>
 
-          <button
-            onClick={() => setActiveFilter('notify')}
-            className={`min-h-[36px] px-3.5 py-1.5 rounded-xl text-xs font-semibold flex items-center space-x-1.5 transition-all ${
+        <button
+          onClick={() => setActiveFilter('notify')}
+          className={`min-h-[38px] px-2 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center justify-center space-x-1.5 ${
+            activeFilter === 'notify'
+              ? 'bg-[#3D5E52] text-white shadow-xs'
+              : 'text-[#6D655F] hover:text-[#2B2522]'
+          }`}
+        >
+          <Bell className="w-3.5 h-3.5 shrink-0" />
+          <span>Notif</span>
+          <span
+            className={`text-[10px] px-1.5 py-0.2 rounded-full font-bold ${
               activeFilter === 'notify'
-                ? 'bg-[#3D5E52] text-white shadow-sm'
-                : 'bg-white border border-[#E8E1D5] text-[#6D655F] hover:text-[#2B2522] hover:bg-[#FAF8F2]'
+                ? 'bg-white/20 text-white'
+                : 'bg-white text-[#6D655F] border border-[#E8E1D5]'
             }`}
           >
-            <Bell className="w-3.5 h-3.5" />
-            <span>Notif ({members.filter((m) => m.is_notify).length})</span>
-          </button>
-        </div>
+            {members.filter((m) => m.is_notify).length}
+          </span>
+        </button>
+      </div>
 
-        {/* Generation Quick Filter Chips */}
-        {generations.length > 0 && (
-          <div className="flex items-center space-x-1.5 overflow-x-auto pb-1 scrollbar-none w-full">
+      {/* Row 2: Generation Quick Filter Chips (Horizontal Scrollable) */}
+      {generations.length > 0 && (
+        <div className="flex items-center space-x-1.5 overflow-x-auto pb-1 scrollbar-none -mx-1 px-1">
+          <button
+            onClick={() => setGenFilter('all')}
+            className={`px-3 py-1.5 rounded-xl text-xs font-bold shrink-0 transition-all ${
+              genFilter === 'all'
+                ? 'bg-[#2B2522] text-white shadow-xs'
+                : 'bg-white text-[#6D655F] border border-[#E8E1D5] hover:bg-[#FAF8F2]'
+            }`}
+          >
+            Semua Gen
+          </button>
+          {generations.map((g) => (
             <button
-              onClick={() => setGenFilter('all')}
-              className={`px-3 py-1 rounded-lg text-xs font-semibold shrink-0 transition-all ${
-                genFilter === 'all'
-                  ? 'bg-[#2B2522] text-white'
+              key={g}
+              onClick={() => setGenFilter(String(g))}
+              className={`px-3 py-1.5 rounded-xl text-xs font-bold shrink-0 transition-all ${
+                genFilter === String(g)
+                  ? 'bg-[#3D5E52] text-white shadow-xs'
                   : 'bg-white text-[#6D655F] border border-[#E8E1D5] hover:bg-[#FAF8F2]'
               }`}
             >
-              Semua Gen
+              Gen {g}
             </button>
-            {generations.map((g) => (
-              <button
-                key={g}
-                onClick={() => setGenFilter(String(g))}
-                className={`px-3 py-1 rounded-lg text-xs font-semibold shrink-0 transition-all ${
-                  genFilter === String(g)
-                    ? 'bg-[#3D5E52] text-white shadow-xs'
-                    : 'bg-white text-[#6D655F] border border-[#E8E1D5] hover:bg-[#FAF8F2]'
-                }`}
-              >
-                Gen {g}
-              </button>
-            ))}
-          </div>
-        )}
-      </div>
+          ))}
+        </div>
+      )}
 
       {/* Member List */}
       {loading ? (
@@ -322,68 +347,52 @@ export default function MemberView({
                     </div>
                   </div>
 
-                  {/* Right: Quick Action Toggles & Edit/Delete */}
-                  <div className="flex items-center space-x-1.5 shrink-0">
+                  {/* Right: Quick Action Toggles */}
+                  <div className="flex items-center space-x-2 shrink-0">
                     {/* Auto-Record Toggle Button */}
                     <button
-                      onClick={() => onToggleAutoRecord(member.id, member.is_auto_record)}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onToggleAutoRecord(member.id, member.is_auto_record);
+                      }}
                       title={
                         member.is_auto_record
-                          ? 'Auto-Record Aktif (Klik untuk mematikan)'
-                          : 'Auto-Record Mati (Klik untuk mengaktifkan)'
+                          ? 'Auto-Record Aktif (Ketuk untuk mematikan)'
+                          : 'Auto-Record Mati (Ketuk untuk mengaktifkan)'
                       }
-                      className={`w-[54px] h-10 rounded-xl border flex flex-col items-center justify-center transition-all cursor-pointer ${
+                      className={`min-h-[42px] px-3 py-1 rounded-xl border flex flex-col items-center justify-center transition-all cursor-pointer active:scale-95 ${
                         member.is_auto_record
                           ? 'bg-[#EAF1EE] border-[#BED5CC] text-[#2D4A3F] shadow-xs'
                           : 'bg-[#FAF8F2] border-[#E8E1D5] text-[#A1988F] hover:text-[#2B2522] hover:bg-[#F4EFE7]'
                       }`}
                     >
                       <Video className="w-3.5 h-3.5 shrink-0" />
-                      <span className="text-[9px] font-bold mt-0.5 leading-none">
+                      <span className="text-[9px] font-extrabold mt-0.5 tracking-tight">
                         {member.is_auto_record ? 'REC ON' : 'REC OFF'}
                       </span>
                     </button>
 
                     {/* Notify Toggle Button */}
                     <button
-                      onClick={() => onToggleNotify(member.id, member.is_notify)}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onToggleNotify(member.id, member.is_notify);
+                      }}
                       title={
                         member.is_notify
-                          ? 'Notifikasi Aktif (Klik untuk mematikan)'
-                          : 'Notifikasi Mati (Klik untuk mengaktifkan)'
+                          ? 'Notifikasi Aktif (Ketuk untuk mematikan)'
+                          : 'Notifikasi Mati (Ketuk untuk mengaktifkan)'
                       }
-                      className={`w-[48px] h-10 rounded-xl border flex flex-col items-center justify-center transition-all cursor-pointer ${
+                      className={`min-h-[42px] px-3 py-1 rounded-xl border flex flex-col items-center justify-center transition-all cursor-pointer active:scale-95 ${
                         member.is_notify
                           ? 'bg-[#FAF0E6] border-[#ECD9C8] text-[#8C4A36] shadow-xs'
                           : 'bg-[#FAF8F2] border-[#E8E1D5] text-[#A1988F] hover:text-[#2B2522] hover:bg-[#F4EFE7]'
                       }`}
                     >
                       <Bell className="w-3.5 h-3.5 shrink-0" />
-                      <span className="text-[9px] font-bold mt-0.5 leading-none">
-                        {member.is_notify ? 'ON' : 'OFF'}
+                      <span className="text-[9px] font-extrabold mt-0.5 tracking-tight">
+                        {member.is_notify ? 'NOTIF ON' : 'NOTIF OFF'}
                       </span>
-                    </button>
-
-                    {/* Edit button */}
-                    <button
-                      onClick={() => onOpenEditModal(member)}
-                      className="w-9 h-10 flex items-center justify-center rounded-xl text-[#8A8179] hover:text-[#2B2522] hover:bg-[#FAF8F2] border border-transparent hover:border-[#E8E1D5] transition-all cursor-pointer"
-                      title="Edit Member"
-                    >
-                      <Edit2 className="w-3.5 h-3.5" />
-                    </button>
-
-                    {/* Delete button */}
-                    <button
-                      onClick={() => {
-                        if (window.confirm(`Hapus ${member.name} dari daftar member?`)) {
-                          onDeleteMember(member.id);
-                        }
-                      }}
-                      className="w-9 h-10 flex items-center justify-center rounded-xl text-[#8A8179] hover:text-[#8C4A36] hover:bg-[#FAF0E6] border border-transparent hover:border-[#ECD9C8] transition-all cursor-pointer"
-                      title="Hapus Member"
-                    >
-                      <Trash2 className="w-3.5 h-3.5" />
                     </button>
                   </div>
                 </div>
@@ -403,7 +412,8 @@ export default function MemberView({
                 <img
                   src={selectedMember.avatar_url || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&h=100&fit=crop'}
                   alt={selectedMember.name}
-                  className="w-14 h-14 rounded-full object-cover border-2 border-[#3D5E52] shadow-sm shrink-0"
+                  className="rounded-full object-cover border-2 border-[#3D5E52] shadow-sm shrink-0"
+                  style={{ width: '56px', height: '56px', minWidth: '56px', maxWidth: '56px', maxHeight: '56px' }}
                 />
                 <div className="min-w-0">
                   <div className="flex items-center space-x-2">
@@ -559,12 +569,27 @@ export default function MemberView({
                 className="flex-1 min-h-[44px] rounded-xl bg-[#FAF8F2] hover:bg-[#F4EFE7] border border-[#E8E1D5] text-xs font-bold text-[#2B2522] flex items-center justify-center space-x-1.5 transition-all active:scale-95 shadow-xs"
               >
                 <Edit2 className="w-3.5 h-3.5 text-[#3D5E52]" />
-                <span>Edit Data Member</span>
+                <span>Edit</span>
+              </button>
+
+              <button
+                onClick={() => {
+                  if (window.confirm(`Hapus member ${selectedMember.name} dari sistem?`)) {
+                    const idToDelete = selectedMember.id;
+                    setSelectedMember(null);
+                    onDeleteMember(idToDelete);
+                  }
+                }}
+                className="min-h-[44px] px-3.5 rounded-xl bg-[#FAF0E6] hover:bg-[#F5DFD6] border border-[#ECD9C8] text-[#8C4A36] text-xs font-bold flex items-center justify-center space-x-1 transition-all active:scale-95 shadow-xs"
+                title="Hapus Member"
+              >
+                <Trash2 className="w-3.5 h-3.5" />
+                <span>Hapus</span>
               </button>
 
               <button
                 onClick={() => setSelectedMember(null)}
-                className="min-h-[44px] px-6 rounded-xl bg-[#3D5E52] hover:bg-[#314D43] text-xs font-bold text-white transition-all active:scale-95 shadow-md shadow-[#3D5E52]/20"
+                className="min-h-[44px] px-5 rounded-xl bg-[#3D5E52] hover:bg-[#314D43] text-xs font-bold text-white transition-all active:scale-95 shadow-md shadow-[#3D5E52]/20"
               >
                 Tutup
               </button>
