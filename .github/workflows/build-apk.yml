@@ -54,6 +54,17 @@ jobs:
           fi
           npx cap sync android
 
+      - name: Generate Native Android Launcher Icons & App Branding
+        run: |
+          python3 -m pip install pillow
+          python3 scripts/generate_android_icons.py
+          BUILD_GRADLE="android/app/build.gradle"
+          if [ -f "$BUILD_GRADLE" ]; then
+            sed -i 's/versionCode [0-9]\+/versionCode 20500/g' "$BUILD_GRADLE"
+            sed -i 's/versionName ".*"/versionName "2.5.0"/g' "$BUILD_GRADLE"
+            echo "Updated Android build.gradle to Version 2.5.0 (versionCode 20500)"
+          fi
+
       - name: Configure Android Permissions & Cleartext Traffic
         run: |
           MANIFEST="android/app/src/main/AndroidManifest.xml"

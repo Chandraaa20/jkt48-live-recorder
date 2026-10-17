@@ -644,7 +644,7 @@ export default function SettingsView({
 
         <div className="text-xs text-[#6D655F] space-y-1">
           <p>
-            <strong className="text-[#2B2522]">Versi:</strong> 1.0.0 (Warm Earth Tones • Anti-Corrupt Recorder)
+            <strong className="text-[#2B2522]">Versi:</strong> 2.5.0 (Forum Topics • Reconnect Recovery • JKT48 Live)
           </p>
           <p>
             <strong className="text-[#2B2522]">Framework:</strong> React + Tailwind CSS + Lucide Icons + Hls.js
