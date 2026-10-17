@@ -245,6 +245,7 @@ export default function App() {
         {currentTab === TABS.MEMBERS && (
           <MemberView
             members={members}
+            recordings={recordings}
             loading={loading}
             onToggleAutoRecord={handleToggleAutoRecord}
             onToggleNotify={handleToggleNotify}

@@ -5,6 +5,8 @@ import {
   Disc3,
   CheckCircle2,
   Clock,
+  Share2,
+  Check,
 } from '../components/Icons';
 
 function formatDuration(sec) {
@@ -22,6 +24,7 @@ export default function LiveView({
 }) {
   const [triggeringId, setTriggeringId] = useState(null);
   const [elapsedSecs, setElapsedSecs] = useState({});
+  const [shareToast, setShareToast] = useState(null);
 
   useEffect(() => {
     const timer = setInterval(() => {
@@ -58,6 +61,35 @@ export default function LiveView({
     }
   };
 
+  const handleShare = async (live) => {
+    const memberName = live.member?.name || 'Member JKT48';
+    const platformName = live.platform?.toUpperCase() || 'LIVE';
+    const liveTitle = live.title || 'Siaran Langsung';
+    const shareText = `🔴 ${memberName} sedang LIVE di ${platformName}!\n"${liveTitle}"\nNonton: ${live.stream_url || 'https://www.idn.app'}`;
+
+    if (navigator.share) {
+      try {
+        await navigator.share({
+          title: `${memberName} Live`,
+          text: shareText,
+          url: live.stream_url || 'https://www.idn.app',
+        });
+        return;
+      } catch (e) {
+        // Fallback to clipboard if user dismissed or unsupported
+      }
+    }
+
+    try {
+      await navigator.clipboard.writeText(shareText);
+      setShareToast(`Tautan live ${memberName} berhasil disalin!`);
+      setTimeout(() => setShareToast(null), 3000);
+    } catch {
+      setShareToast('Gagal menyalin tautan');
+      setTimeout(() => setShareToast(null), 2500);
+    }
+  };
+
   return (
     <div className="px-4 sm:px-6 pt-5 pb-32 max-w-lg mx-auto space-y-5">
       {/* View Header with Title */}
@@ -77,6 +109,14 @@ export default function LiveView({
           </p>
         </div>
       </div>
+
+      {/* Share Toast Banner */}
+      {shareToast && (
+        <div className="p-3 rounded-xl bg-[#EAF1EE] border border-[#BED5CC] text-[#2D4A3F] text-xs font-semibold flex items-center space-x-2 animate-in fade-in shadow-xs">
+          <Check className="w-4 h-4 text-[#3D5E52] shrink-0" />
+          <span>{shareToast}</span>
+        </div>
+      )}
 
       {/* Lives List / Empty State */}
       {loading ? (
@@ -112,7 +152,11 @@ export default function LiveView({
             return (
               <div
                 key={live.id}
-                className="rounded-2xl bg-white border border-[#E8E1D5] overflow-hidden transition-all shadow-[0_2px_12px_-3px_rgba(43,37,34,0.06)] hover:border-[#D5C9BC]"
+                className={`rounded-2xl bg-white border overflow-hidden transition-all shadow-[0_2px_12px_-3px_rgba(43,37,34,0.06)] ${
+                  live.is_recording
+                    ? 'border-[#C94A3D]/40 ring-2 ring-[#C94A3D]/10'
+                    : 'border-[#E8E1D5] hover:border-[#D5C9BC]'
+                }`}
               >
                 {/* Live Stream Media Container */}
                 <div
@@ -192,20 +236,20 @@ export default function LiveView({
                     </div>
                   </div>
 
-                  {/* Dual Action Buttons */}
-                  <div className="flex items-center gap-2.5 pt-1">
+                  {/* Dual Action Buttons + Share */}
+                  <div className="flex items-center gap-2 pt-1">
                     <button
                       onClick={() => onOpenPlayer(live)}
                       className="flex-1 min-h-[44px] flex items-center justify-center space-x-1.5 py-2.5 rounded-xl bg-[#FAF8F2] hover:bg-[#F4EFE7] text-xs font-bold text-[#2B2522] border border-[#E8E1D5] transition-all active:scale-95 shadow-xs"
                     >
                       <Play className="w-3.5 h-3.5 fill-[#2B2522]" />
-                      <span>Nonton Stream</span>
+                      <span>Nonton</span>
                     </button>
 
                     {live.is_recording ? (
                       <div className="flex-1 min-h-[44px] flex items-center justify-center space-x-1.5 py-2.5 rounded-xl bg-[#FAF0E6] border border-[#ECD9C8] text-[#8C4A36] text-xs font-bold shadow-xs">
                         <span className="w-2 h-2 rounded-full bg-[#C94A3D] rec-pulse" />
-                        <span>Sedang Merekam</span>
+                        <span>Merekam</span>
                       </div>
                     ) : (
                       <button
@@ -223,6 +267,15 @@ export default function LiveView({
                         </span>
                       </button>
                     )}
+
+                    {/* Quick Share Button */}
+                    <button
+                      onClick={() => handleShare(live)}
+                      className="min-h-[44px] w-11 flex items-center justify-center rounded-xl bg-white hover:bg-[#FAF8F2] border border-[#E8E1D5] text-[#6D655F] hover:text-[#2B2522] transition-all active:scale-95 shadow-xs shrink-0"
+                      title="Bagikan siaran ini"
+                    >
+                      <Share2 className="w-4 h-4" />
+                    </button>
                   </div>
                 </div>
               </div>

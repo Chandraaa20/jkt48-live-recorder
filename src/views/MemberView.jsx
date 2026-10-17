@@ -9,10 +9,27 @@ import {
   Trash2,
   Check,
   AlertCircle,
+  X,
+  Clock,
+  HardDrive,
+  Play,
+  ExternalLink,
+  Calendar,
+  Sparkles,
 } from '../components/Icons';
+
+function formatDuration(sec) {
+  if (!sec || sec < 0) return '00:00';
+  const hrs = Math.floor(sec / 3600);
+  const mins = Math.floor((sec % 3600) / 60);
+  const secs = sec % 60;
+  if (hrs > 0) return `${hrs}j ${mins}m ${secs}d`;
+  return `${mins}m ${secs}d`;
+}
 
 export default function MemberView({
   members = [],
+  recordings = [],
   loading = false,
   onToggleAutoRecord,
   onToggleNotify,
@@ -26,6 +43,7 @@ export default function MemberView({
   const [activeFilter, setActiveFilter] = useState('all'); // 'all' | 'auto_record' | 'notify'
   const [genFilter, setGenFilter] = useState('all');
   const [feedbackMsg, setFeedbackMsg] = useState(null);
+  const [selectedMember, setSelectedMember] = useState(null);
 
   // Filter members based on search and toggle filters
   const filteredMembers = useMemo(() => {
@@ -192,20 +210,33 @@ export default function MemberView({
           </button>
         </div>
 
-        {/* Gen filter */}
+        {/* Generation Quick Filter Chips */}
         {generations.length > 0 && (
-          <select
-            value={genFilter}
-            onChange={(e) => setGenFilter(e.target.value)}
-            className="min-h-[36px] px-3 py-1.5 rounded-xl bg-white border border-[#E8E1D5] text-xs text-[#2B2522] font-semibold focus:outline-none focus:border-[#3D5E52] shrink-0 shadow-[0_2px_12px_-3px_rgba(43,37,34,0.06)]"
-          >
-            <option value="all">Semua Gen</option>
+          <div className="flex items-center space-x-1.5 overflow-x-auto pb-1 scrollbar-none w-full">
+            <button
+              onClick={() => setGenFilter('all')}
+              className={`px-3 py-1 rounded-lg text-xs font-semibold shrink-0 transition-all ${
+                genFilter === 'all'
+                  ? 'bg-[#2B2522] text-white'
+                  : 'bg-white text-[#6D655F] border border-[#E8E1D5] hover:bg-[#FAF8F2]'
+              }`}
+            >
+              Semua Gen
+            </button>
             {generations.map((g) => (
-              <option key={g} value={g}>
+              <button
+                key={g}
+                onClick={() => setGenFilter(String(g))}
+                className={`px-3 py-1 rounded-lg text-xs font-semibold shrink-0 transition-all ${
+                  genFilter === String(g)
+                    ? 'bg-[#3D5E52] text-white shadow-xs'
+                    : 'bg-white text-[#6D655F] border border-[#E8E1D5] hover:bg-[#FAF8F2]'
+                }`}
+              >
                 Gen {g}
-              </option>
+              </button>
             ))}
-          </select>
+          </div>
         )}
       </div>
 
@@ -237,24 +268,30 @@ export default function MemberView({
             return (
               <div
                 key={member.id}
-                className="p-4 sm:p-5 rounded-2xl bg-white border border-[#E8E1D5] hover:border-[#D5C9BC] transition-all shadow-[0_2px_12px_-3px_rgba(43,37,34,0.06)]"
+                className="p-4 sm:p-5 rounded-2xl bg-white border border-[#E8E1D5] hover:border-[#BED5CC] transition-all shadow-[0_2px_12px_-3px_rgba(43,37,34,0.06)]"
               >
                 <div className="flex items-center justify-between gap-3">
-                  {/* Left: Avatar & Names */}
-                  <div className="flex items-center space-x-3.5 overflow-hidden min-w-0">
-                    <img
-                      src={
-                        member.avatar_url ||
-                        'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&h=100&fit=crop'
-                      }
-                      alt={member.name}
-                      className="w-12 h-12 rounded-full object-cover border border-[#E8E1D5] shrink-0 shadow-xs"
-                      loading="lazy"
-                    />
+                  {/* Left: Avatar & Names (Clickable to open dossier) */}
+                  <div
+                    onClick={() => setSelectedMember(member)}
+                    className="flex items-center space-x-3.5 overflow-hidden min-w-0 flex-1 cursor-pointer group"
+                    title="Ketuk untuk melihat profil lengkap & arsip live"
+                  >
+                    <div className="relative shrink-0">
+                      <img
+                        src={
+                          member.avatar_url ||
+                          'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&h=100&fit=crop'
+                        }
+                        alt={member.name}
+                        className="w-12 h-12 rounded-full object-cover border border-[#E8E1D5] shadow-xs group-hover:scale-105 group-hover:border-[#3D5E52] transition-all"
+                        loading="lazy"
+                      />
+                    </div>
 
-                    <div className="min-w-0">
+                    <div className="min-w-0 flex-1">
                       <div className="flex items-center space-x-2">
-                        <span className="font-bold text-sm text-[#2B2522] truncate">
+                        <span className="font-bold text-sm text-[#2B2522] group-hover:text-[#3D5E52] transition-colors truncate">
                           {member.name}
                         </span>
                         {member.generation && (
@@ -353,6 +390,186 @@ export default function MemberView({
               </div>
             );
           })}
+        </div>
+      )}
+
+      {/* Member Dossier & Archive Modal */}
+      {selectedMember && (
+        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-black/60 backdrop-blur-xs animate-in fade-in">
+          <div className="w-full max-w-lg bg-white rounded-t-3xl sm:rounded-3xl border border-[#BED5CC] shadow-2xl max-h-[88vh] flex flex-col overflow-hidden animate-in slide-in-from-bottom-6">
+            {/* Modal Header */}
+            <div className="p-5 pb-4 border-b border-[#F4EFE7] flex items-center justify-between bg-gradient-to-b from-[#FAF8F2] to-white">
+              <div className="flex items-center space-x-3.5 min-w-0">
+                <img
+                  src={selectedMember.avatar_url || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&h=100&fit=crop'}
+                  alt={selectedMember.name}
+                  className="w-14 h-14 rounded-full object-cover border-2 border-[#3D5E52] shadow-sm shrink-0"
+                />
+                <div className="min-w-0">
+                  <div className="flex items-center space-x-2">
+                    <h3 className="font-bold text-base text-[#2B2522] truncate">
+                      {selectedMember.name}
+                    </h3>
+                    {selectedMember.generation && (
+                      <span className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-[#3D5E52] text-white">
+                        Gen {selectedMember.generation}
+                      </span>
+                    )}
+                  </div>
+                  <p className="text-xs text-[#6D655F] font-medium mt-0.5">
+                    {selectedMember.nickname ? `Panggilan: ${selectedMember.nickname}` : 'Member JKT48'}
+                  </p>
+                </div>
+              </div>
+
+              <button
+                onClick={() => setSelectedMember(null)}
+                className="w-9 h-9 rounded-full bg-[#F4EFE7] hover:bg-[#E8E1D5] flex items-center justify-center text-[#6D655F] transition-all cursor-pointer"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            {/* Modal Body */}
+            <div className="p-5 space-y-5 overflow-y-auto flex-1">
+              {/* Quick Settings Toggles */}
+              <div className="grid grid-cols-2 gap-2.5">
+                <div
+                  onClick={() => onToggleAutoRecord(selectedMember.id, selectedMember.is_auto_record)}
+                  className={`p-3 rounded-2xl border cursor-pointer transition-all flex items-center space-x-3 ${
+                    selectedMember.is_auto_record
+                      ? 'bg-[#EAF1EE] border-[#BED5CC]'
+                      : 'bg-[#FAF8F2] border-[#E8E1D5]'
+                  }`}
+                >
+                  <div className={`w-8 h-8 rounded-xl flex items-center justify-center shrink-0 ${
+                    selectedMember.is_auto_record ? 'bg-[#3D5E52] text-white' : 'bg-[#E8E1D5] text-[#8A8179]'
+                  }`}>
+                    <Video className="w-4 h-4" />
+                  </div>
+                  <div>
+                    <span className="text-[10px] text-[#6D655F] block font-medium">Auto-Record</span>
+                    <span className={`text-xs font-bold ${selectedMember.is_auto_record ? 'text-[#2D4A3F]' : 'text-[#8A8179]'}`}>
+                      {selectedMember.is_auto_record ? '🟢 Aktif' : '⚪ Mati'}
+                    </span>
+                  </div>
+                </div>
+
+                <div
+                  onClick={() => onToggleNotify(selectedMember.id, selectedMember.is_notify)}
+                  className={`p-3 rounded-2xl border cursor-pointer transition-all flex items-center space-x-3 ${
+                    selectedMember.is_notify
+                      ? 'bg-[#FAF0E6] border-[#ECD9C8]'
+                      : 'bg-[#FAF8F2] border-[#E8E1D5]'
+                  }`}
+                >
+                  <div className={`w-8 h-8 rounded-xl flex items-center justify-center shrink-0 ${
+                    selectedMember.is_notify ? 'bg-[#8C4A36] text-white' : 'bg-[#E8E1D5] text-[#8A8179]'
+                  }`}>
+                    <Bell className="w-4 h-4" />
+                  </div>
+                  <div>
+                    <span className="text-[10px] text-[#6D655F] block font-medium">Notifikasi</span>
+                    <span className={`text-xs font-bold ${selectedMember.is_notify ? 'text-[#8C4A36]' : 'text-[#8A8179]'}`}>
+                      {selectedMember.is_notify ? '🔔 Aktif' : '🔕 Mati'}
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Archive Stats for this member */}
+              {(() => {
+                const memberRecs = recordings.filter((r) => r.member_id === selectedMember.id && r.status === 'completed');
+                const totalMb = memberRecs.reduce((acc, r) => acc + Number(r.file_size_mb || 0), 0);
+                const totalSec = memberRecs.reduce((acc, r) => acc + Number(r.duration_seconds || 0), 0);
+
+                return (
+                  <div className="space-y-3">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center space-x-2">
+                        <Sparkles className="w-4 h-4 text-[#3D5E52]" />
+                        <h4 className="text-xs font-bold uppercase tracking-wider text-[#2B2522]">
+                          Arsip Video di Telegram ({memberRecs.length})
+                        </h4>
+                      </div>
+                      <span className="text-[11px] font-bold text-[#3D5E52] bg-[#EAF1EE] px-2 py-0.5 rounded-md">
+                        {totalMb.toFixed(2)} MB • {formatDuration(totalSec)}
+                      </span>
+                    </div>
+
+                    {memberRecs.length === 0 ? (
+                      <div className="p-6 rounded-2xl bg-[#FAF8F2] border border-[#E8E1D5] text-center space-y-1">
+                        <p className="text-xs font-bold text-[#2B2522]">
+                          Belum ada arsip rekaman untuk {selectedMember.name}
+                        </p>
+                        <p className="text-[11px] text-[#6D655F]">
+                          Ketika live {selectedMember.name} selesai direkam, video Telegram akan otomatis terdaftar di sini.
+                        </p>
+                      </div>
+                    ) : (
+                      <div className="space-y-2.5 max-h-56 overflow-y-auto pr-1">
+                        {memberRecs.map((r) => (
+                          <div
+                            key={r.id}
+                            className="p-3.5 rounded-xl bg-[#FAF8F2] border border-[#E8E1D5] hover:border-[#3D5E52] transition-all flex items-center justify-between gap-3 shadow-xs"
+                          >
+                            <div className="min-w-0 flex-1">
+                              <p className="text-xs font-bold text-[#2B2522] truncate">
+                                {r.title || 'Rekaman Live'}
+                              </p>
+                              <div className="flex items-center space-x-2 text-[10px] text-[#6D655F] mt-1">
+                                <span className="uppercase font-bold px-1.5 py-0.5 rounded bg-white border border-[#E8E1D5]">
+                                  {r.platform?.toUpperCase()}
+                                </span>
+                                <span>{formatDuration(r.duration_seconds)}</span>
+                                <span>•</span>
+                                <span>{r.file_size_mb || 0} MB</span>
+                              </div>
+                            </div>
+
+                            {r.video_url && r.video_url.startsWith('http') && (
+                              <a
+                                href={r.video_url}
+                                target="_blank"
+                                rel="noreferrer"
+                                className="min-h-[36px] px-3 rounded-lg bg-[#3D5E52] hover:bg-[#314D43] text-white text-[11px] font-bold flex items-center space-x-1 shrink-0 active:scale-95 shadow-xs"
+                              >
+                                <Play className="w-3 h-3 fill-white" />
+                                <span>Buka</span>
+                                <ExternalLink className="w-3 h-3" />
+                              </a>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                );
+              })()}
+            </div>
+
+            {/* Modal Footer */}
+            <div className="p-4 border-t border-[#F4EFE7] bg-white flex items-center gap-2">
+              <button
+                onClick={() => {
+                  const m = selectedMember;
+                  setSelectedMember(null);
+                  onOpenEditModal(m);
+                }}
+                className="flex-1 min-h-[44px] rounded-xl bg-[#FAF8F2] hover:bg-[#F4EFE7] border border-[#E8E1D5] text-xs font-bold text-[#2B2522] flex items-center justify-center space-x-1.5 transition-all active:scale-95 shadow-xs"
+              >
+                <Edit2 className="w-3.5 h-3.5 text-[#3D5E52]" />
+                <span>Edit Data Member</span>
+              </button>
+
+              <button
+                onClick={() => setSelectedMember(null)}
+                className="min-h-[44px] px-6 rounded-xl bg-[#3D5E52] hover:bg-[#314D43] text-xs font-bold text-white transition-all active:scale-95 shadow-md shadow-[#3D5E52]/20"
+              >
+                Tutup
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </div>

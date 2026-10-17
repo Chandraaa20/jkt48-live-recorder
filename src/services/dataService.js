@@ -806,6 +806,53 @@ export async function cleanGarbageRecordings() {
   }
 }
 
+// Delete a single recording by ID
+export async function deleteSingleRecording(recordingId) {
+  const supabase = getSupabaseClient();
+  const recs = getLocalData(LOCAL_STORAGE_RECORDINGS, INITIAL_RECORDINGS);
+  setLocalData(LOCAL_STORAGE_RECORDINGS, recs.filter((r) => r.id !== recordingId));
+
+  if (!supabase) return { success: true };
+
+  try {
+    const { error } = await supabase
+      .from('recordings')
+      .delete()
+      .eq('id', recordingId);
+
+    if (error) throw error;
+    return { success: true };
+  } catch (err) {
+    console.error('deleteSingleRecording error:', err);
+    return { success: false, error: err.message };
+  }
+}
+
+// Rename / update recording title
+export async function updateRecordingTitle(recordingId, newTitle) {
+  const supabase = getSupabaseClient();
+  const recs = getLocalData(LOCAL_STORAGE_RECORDINGS, INITIAL_RECORDINGS);
+  setLocalData(
+    LOCAL_STORAGE_RECORDINGS,
+    recs.map((r) => (r.id === recordingId ? { ...r, title: newTitle } : r))
+  );
+
+  if (!supabase) return { success: true };
+
+  try {
+    const { error } = await supabase
+      .from('recordings')
+      .update({ title: newTitle })
+      .eq('id', recordingId);
+
+    if (error) throw error;
+    return { success: true };
+  } catch (err) {
+    console.error('updateRecordingTitle error:', err);
+    return { success: false, error: err.message };
+  }
+}
+
 
 /**
  * 5. REAL-TIME SUBSCRIPTION
