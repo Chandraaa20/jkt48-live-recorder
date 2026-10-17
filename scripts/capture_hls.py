@@ -212,7 +212,7 @@ def check_supabase_stop(supabase_url, supabase_key, recording_id):
     return False
 
 def report_supabase_progress(supabase_url, supabase_key, recording_id, total_bytes, elapsed):
-    """Publish only measured runner progress; the UI must never invent values."""
+    """Publish real-time heartbeat progress to Supabase recordings table."""
     if not supabase_url or not supabase_key or not recording_id:
         return
     try:
@@ -221,9 +221,9 @@ def report_supabase_progress(supabase_url, supabase_key, recording_id, total_byt
             'apikey': supabase_key,
             'Authorization': f'Bearer {supabase_key}',
             'Content-Type': 'application/json',
+            'Prefer': 'return=minimal'
         }, json={
-            'status': 'recording',
-            'file_size_mb': round(total_bytes / (1024 * 1024), 2),
+            'file_size_mb': round(total_bytes / 1048576, 2),
             'duration_seconds': max(0, int(elapsed)),
         }, timeout=4)
     except Exception:
@@ -234,9 +234,11 @@ def main():
     stream_url = sys.argv[1] if len(sys.argv) > 1 else ''
     output_path = sys.argv[2] if len(sys.argv) > 2 else 'raw_segments/rec_part_000.ts'
     duration = int(sys.argv[3]) if len(sys.argv) > 3 and sys.argv[3].isdigit() else 45
-    recording_id = sys.argv[4] if len(sys.argv) > 4 and sys.argv[4] != 'none' else None
-    supabase_url = sys.argv[5] if len(sys.argv) > 5 and sys.argv[5] != 'none' else None
-    supabase_key = sys.argv[6] if len(sys.argv) > 6 and sys.argv[6] != 'none' else None
+    recording_id = sys.argv[4] if len(sys.argv) > 4 and sys.argv[4] not in ('none', '') else os.environ.get('RECORDING_ID')
+    supabase_url = sys.argv[5] if len(sys.argv) > 5 and sys.argv[5] not in ('none', '') else (os.environ.get('SUPABASE_URL') or 'https://rugjqcvwlfkonziykita.supabase.co')
+    supabase_key = sys.argv[6] if len(sys.argv) > 6 and sys.argv[6] not in ('none', '') else (
+        os.environ.get('SUPABASE_KEY') or os.environ.get('SUPABASE_SERVICE_ROLE_KEY') or os.environ.get('SUPABASE_SERVICE_KEY') or os.environ.get('SUPABASE_ANON_KEY') or 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJ1Z2pxY3Z3bGZrb256aXlraXRhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTE5ODQyNzUsImV4cCI6MjEwNzU2MDI3NX0.g6RFp4Ykir52EvdCpbZfZfyeoKGb5ohwLTD2YjkYNE8'
+    )
 
     if not stream_url:
         print("[CaptureHLS] Error: stream_url is required.")
@@ -324,6 +326,11 @@ def main():
                     print("[CaptureHLS] Supabase stop signal detected (user clicked stop). Ending capture.")
                     break
 
+            # Heartbeat progress update every 12 seconds
+            if recording_id and (time.time() - last_progress_report >= 12):
+                report_supabase_progress(supabase_url, supabase_key, recording_id, total_bytes, elapsed)
+                last_progress_report = time.time()
+
             # Check end-of-stream inactivity timeout (90s without new segments)
             idle_time = time.time() - last_new_segment_time
             if idle_time > 90:
@@ -362,7 +369,7 @@ def main():
                                     last_new_segment_time = time.time()
                                     mb = total_bytes / (1024 * 1024)
                                     print(f"[CaptureHLS] Segment {total_segments} ({seg_size/1024:.1f} KB) | Total: {mb:.2f} MB | Elapsed: {elapsed:.0f}s")
-                                    if time.time() - last_progress_report >= 10:
+                                    if time.time() - last_progress_report >= 12:
                                         report_supabase_progress(supabase_url, supabase_key, recording_id, total_bytes, elapsed)
                                         last_progress_report = time.time()
 

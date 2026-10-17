@@ -107,10 +107,16 @@ jobs:
               -H "Authorization: Bearer ${SUPABASE_KEY}" \
               -H "Content-Type: application/json" \
               -d '{"status":"recording"}' || true
+            echo "SUPABASE_URL=$SUPABASE_URL" >> $GITHUB_ENV
+            echo "SUPABASE_KEY=$SUPABASE_KEY" >> $GITHUB_ENV
           fi
 
       - name: Capture Live Stream (Crash-Proof Transport Stream .ts Segmenter)
         id: record_step
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL || 'https://rugjqcvwlfkonziykita.supabase.co' }}
+          SUPABASE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY || secrets.SUPABASE_SERVICE_KEY || secrets.SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJ1Z2pxY3Z3bGZrb256aXlraXRhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTE5ODQyNzUsImV4cCI6MjEwNzU2MDI3NX0.g6RFp4Ykir52EvdCpbZfZfyeoKGb5ohwLTD2YjkYNE8' }}
+          RECORDING_ID: ${{ env.RECORDING_ID }}
         run: |
           echo "Starting recording for $MEMBER_NAME ($PLATFORM)..."
           echo "Stream URL: $STREAM_URL"
@@ -349,6 +355,21 @@ jobs:
                 LAST_MSG_LINK="https://t.me/${CHAT_ID}/${MSG_ID}"
               fi
               echo "Part $CURR_NUM uploaded successfully: $LAST_MSG_LINK"
+
+              # Instant backup sync to Supabase right after upload
+              SUPABASE_URL="${{ secrets.SUPABASE_URL }}"
+              if [ -z "$SUPABASE_URL" ]; then SUPABASE_URL="https://rugjqcvwlfkonziykita.supabase.co"; fi
+              SUPABASE_KEY="${{ secrets.SUPABASE_SERVICE_ROLE_KEY || secrets.SUPABASE_SERVICE_KEY || secrets.SUPABASE_ANON_KEY }}"
+              if [ -z "$SUPABASE_KEY" ]; then SUPABASE_KEY="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJ1Z2pxY3Z3bGZrb256aXlraXRhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTE5ODQyNzUsImV4cCI6MjEwNzU2MDI3NX0.g6RFp4Ykir52EvdCpbZfZfyeoKGb5ohwLTD2YjkYNE8"; fi
+
+              if [ -n "$RECORDING_ID" ] && [ -n "$SUPABASE_URL" ] && [ -n "$SUPABASE_KEY" ]; then
+                echo "Instantly syncing completed status to Supabase for ${RECORDING_ID}..."
+                curl -s -X PATCH "${SUPABASE_URL}/rest/v1/recordings?id=eq.${RECORDING_ID}" \
+                  -H "apikey: ${SUPABASE_KEY}" \
+                  -H "Authorization: Bearer ${SUPABASE_KEY}" \
+                  -H "Content-Type: application/json" \
+                  -d "{\"status\":\"completed\",\"video_url\":\"${LAST_MSG_LINK}\",\"duration_seconds\":${TOTAL_DURATION:-$VID_DUR},\"file_size_mb\":${FILE_SIZE_MB:-$VID_MB}}" || true
+              fi
             else
               echo "Telegram sendVideo error: $RESPONSE"
             fi

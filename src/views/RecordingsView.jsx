@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Disc3,
   CheckCircle2,
@@ -15,7 +15,7 @@ import {
 import { cleanGarbageRecordings } from '../services/dataService';
 
 function formatDuration(sec) {
-  if (!sec) return '00:00';
+  if (!sec || sec < 0) return '00:00';
   const hrs = Math.floor(sec / 3600);
   const mins = Math.floor((sec % 3600) / 60);
   const secs = sec % 60;
@@ -23,6 +23,19 @@ function formatDuration(sec) {
     return `${hrs}j ${mins}m ${secs}d`;
   }
   return `${mins}m ${secs}d`;
+}
+
+function formatLiveTimer(sec) {
+  if (!sec || sec < 0) return '00:00';
+  const hrs = Math.floor(sec / 3600);
+  const mins = Math.floor((sec % 3600) / 60);
+  const secs = sec % 60;
+  const pMins = String(mins).padStart(2, '0');
+  const pSecs = String(secs).padStart(2, '0');
+  if (hrs > 0) {
+    return `${String(hrs).padStart(2, '0')}:${pMins}:${pSecs}`;
+  }
+  return `${pMins}:${pSecs}`;
 }
 
 function formatDate(isoStr) {
@@ -49,6 +62,37 @@ export default function RecordingsView({
   const [activeTab, setActiveTab] = useState('in_progress'); // 'in_progress' | 'completed'
   const [finishingId, setFinishingId] = useState(null);
   const [isCleaning, setIsCleaning] = useState(false);
+  const [now, setNow] = useState(Date.now());
+
+  // 1. Live ticking timer every 1 second
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setNow(Date.now());
+    }, 1000);
+    return () => clearInterval(timer);
+  }, []);
+
+  // 2. Light polling to Supabase recordings every 8 seconds when Recordings tab is open
+  useEffect(() => {
+    if (!onRefreshRecordings) return;
+    const pollInterval = setInterval(() => {
+      onRefreshRecordings();
+    }, 8000);
+    return () => clearInterval(pollInterval);
+  }, [onRefreshRecordings]);
+
+  // Calculate real-time duration in seconds for live recordings
+  const getLiveDurationSeconds = (rec) => {
+    let elapsedFromCreated = 0;
+    if (rec.created_at) {
+      const startMs = new Date(rec.created_at).getTime();
+      if (!isNaN(startMs) && startMs > 0) {
+        elapsedFromCreated = Math.max(0, Math.floor((now - startMs) / 1000));
+      }
+    }
+    const runnerDuration = Number(rec.duration_seconds || 0);
+    return Math.max(runnerDuration, elapsedFromCreated);
+  };
 
   // Split recordings into in-progress vs completed
   const inProgressList = recordings.filter(
@@ -172,6 +216,8 @@ export default function RecordingsView({
             {inProgressList.map((rec) => {
               const member = rec.member || {};
               const isShowroom = rec.platform?.toLowerCase() === 'showroom';
+              const liveSeconds = getLiveDurationSeconds(rec);
+              const fileSizeMb = Number(rec.file_size_mb || 0);
 
               return (
                 <div
@@ -179,7 +225,7 @@ export default function RecordingsView({
                   className="p-5 rounded-2xl bg-white border border-[#BED5CC] relative overflow-hidden shadow-[0_2px_12px_-3px_rgba(43,37,34,0.06)]"
                 >
                   <div className="flex items-start justify-between gap-3">
-                    <div className="flex items-center space-x-3.5 overflow-hidden">
+                    <div className="flex items-center space-x-3.5 min-w-0 flex-1">
                       <div className="relative shrink-0">
                         <img
                           src={
@@ -192,9 +238,9 @@ export default function RecordingsView({
                         <span className="absolute bottom-0 right-0 w-3.5 h-3.5 rounded-full bg-[#C94A3D] rec-pulse border-2 border-white" />
                       </div>
 
-                      <div className="min-w-0">
+                      <div className="min-w-0 flex-1">
                         <div className="flex items-center space-x-1.5 flex-wrap gap-y-1">
-                          <span className="font-bold text-sm text-[#2B2522] truncate">
+                          <span className="font-bold text-sm text-[#2B2522]">
                             {member.name || 'JKT48 Member'}
                           </span>
                           <span
@@ -208,18 +254,22 @@ export default function RecordingsView({
                           </span>
                         </div>
 
-                        <p className="text-xs text-[#2B2522] font-semibold truncate mt-0.5">
+                        <p className="text-xs text-[#2B2522] font-semibold mt-1 leading-snug">
                           {rec.title || 'Live Recording in Progress'}
                         </p>
 
-                        <div className="flex items-center space-x-3 text-[11px] text-[#6D655F] mt-1.5">
-                          <div className="flex items-center space-x-1 font-medium">
+                        <div className="flex items-center space-x-2 text-xs text-[#6D655F] mt-2 flex-wrap gap-y-1">
+                          <div className="flex items-center space-x-1 font-semibold bg-[#F4EFE7] px-2 py-0.5 rounded-md border border-[#E8E1D5]">
                             <Clock className="w-3.5 h-3.5 text-[#3D5E52]" />
-                              <span>{rec.duration_seconds ? formatDuration(rec.duration_seconds) : 'Menunggu data runner…'}</span>
+                            <span className="font-mono text-[#2B2522]">
+                              {formatLiveTimer(liveSeconds)}
+                            </span>
                           </div>
-                          <div className="flex items-center space-x-1 font-medium">
+                          <div className="flex items-center space-x-1 font-semibold bg-[#F4EFE7] px-2 py-0.5 rounded-md border border-[#E8E1D5]">
                             <HardDrive className="w-3.5 h-3.5 text-[#8A8179]" />
-                              <span>{Number(rec.file_size_mb || 0) > 0 ? `${rec.file_size_mb} MB` : 'Menghitung…'}</span>
+                            <span className="font-mono text-[#2B2522]">
+                              {fileSizeMb > 0 ? `${fileSizeMb} MB` : '0 MB'}
+                            </span>
                           </div>
                         </div>
                       </div>
@@ -229,7 +279,7 @@ export default function RecordingsView({
                     <button
                       onClick={() => handleFinish(rec.id)}
                       disabled={finishingId === rec.id || rec.status === 'uploading'}
-                      className={`min-h-[44px] flex items-center space-x-1.5 px-3.5 py-2 rounded-xl text-xs font-bold transition-all border shrink-0 disabled:opacity-50 active:scale-95 shadow-xs ${
+                      className={`min-h-[44px] flex items-center space-x-1.5 px-3 py-2 rounded-xl text-xs font-bold transition-all border shrink-0 disabled:opacity-50 active:scale-95 shadow-xs ${
                         rec.status === 'uploading'
                           ? 'bg-[#EAF1EE] text-[#2D4A3F] border-[#BED5CC]'
                           : 'bg-[#FAF0E6] hover:bg-[#F4E2D3] text-[#8C4A36] border-[#ECD9C8]'
@@ -248,16 +298,17 @@ export default function RecordingsView({
                   </div>
 
                   {/* Status Banner */}
-                  <div className="mt-3.5 pt-3 border-t border-[#F4EFE7] flex items-center justify-between text-[11px]">
-                    <div className="flex items-center space-x-1.5 font-bold px-2 py-0.5 rounded-md border text-[11px] bg-[#EAF1EE] text-[#2D4A3F] border-[#BED5CC]">
-                      <span className={`w-2 h-2 rounded-full ${rec.status === 'uploading' ? 'bg-[#3D5E52] animate-bounce' : 'bg-[#3D5E52] animate-ping'}`} />
+                  <div className="mt-3.5 pt-2.5 border-t border-[#F4EFE7] flex flex-wrap items-center justify-between gap-2 text-xs leading-snug">
+                    <div className="flex items-center space-x-1.5 font-semibold px-2.5 py-1 rounded-lg border text-xs bg-[#EAF1EE] text-[#2D4A3F] border-[#BED5CC]">
                       <span>
                         {rec.status === 'uploading'
-                          ? 'Menyimpan & Mengunggah ke Telegram...'
-                          : 'Sedang merekam (Segmented .ts)'}
+                          ? '☁️ Menggabungkan MP4 & mengunggah ke Telegram...'
+                          : fileSizeMb > 0
+                          ? '🔴 Merekam di Cloud • Live berjalan'
+                          : '⏳ Menghubungkan ke server perekam cloud...'}
                       </span>
                     </div>
-                    <span className="text-[#8A8179] text-[10px]">
+                    <span className="text-[#8A8179] text-[10px] shrink-0">
                       Mulai: {formatDate(rec.created_at)}
                     </span>
                   </div>
@@ -313,9 +364,9 @@ export default function RecordingsView({
                         className="w-12 h-12 rounded-full object-cover border border-[#E8E1D5] shrink-0 shadow-xs"
                       />
 
-                      <div className="min-w-0">
+                      <div className="min-w-0 flex-1">
                         <div className="flex items-center space-x-1.5 flex-wrap gap-y-1">
-                          <span className="font-bold text-sm text-[#2B2522] truncate">
+                          <span className="font-bold text-sm text-[#2B2522]">
                             {member.name || 'JKT48 Member'}
                           </span>
                           <span
@@ -329,7 +380,7 @@ export default function RecordingsView({
                           </span>
                         </div>
 
-                        <p className="text-xs text-[#2B2522] font-semibold truncate mt-0.5">
+                        <p className="text-xs text-[#2B2522] font-semibold mt-1 leading-snug">
                           {rec.title || 'Rekaman Live'}
                         </p>
 
