@@ -262,13 +262,22 @@ jobs:
 
           CHAT_ID="${{ secrets.TELEGRAM_CHAT_ID }}"
           if [ -z "$CHAT_ID" ]; then
-            CHAT_ID="-1004418157265"
+            CHAT_ID="-1004410575074"
           fi
 
           if [ -z "$BOT_TOKEN" ] || [ -z "$CHAT_ID" ]; then
             echo "TELEGRAM_BOT_TOKEN or CHAT_ID missing."
             echo "TELEGRAM_LINK=" >> $GITHUB_ENV
             exit 0
+          fi
+
+          # 0. Resolve Telegram Forum Topic ID for this member
+          TOPIC_ID=$(python scripts/telegram_topic_manager.py "$MEMBER_NAME" 2>/dev/null || echo "")
+          if [ -n "$TOPIC_ID" ] && [ "$TOPIC_ID" -gt 0 ] 2>/dev/null; then
+            echo "Routing upload for '$MEMBER_NAME' into Telegram Forum Topic ID: $TOPIC_ID"
+          else
+            echo "No specific topic ID found for '$MEMBER_NAME', uploading to general/channel."
+            TOPIC_ID=""
           fi
 
           # Wait for Local Bot API server on port 8081
@@ -322,6 +331,9 @@ jobs:
 
             # 3. Assemble curl form parameters
             EXTRA_ARGS=()
+            if [ -n "$TOPIC_ID" ]; then
+              EXTRA_ARGS+=(-F "message_thread_id=${TOPIC_ID}")
+            fi
             if [ -n "$VID_WIDTH" ] && [ "$VID_WIDTH" -gt 0 ] 2>/dev/null; then
               EXTRA_ARGS+=(-F "width=${VID_WIDTH}")
             fi
@@ -350,7 +362,11 @@ jobs:
               MSG_ID=$(echo "$RESPONSE" | jq -r '.result.message_id')
               if [[ "$CHAT_ID" =~ ^-100 ]]; then
                 CLEAN_CHAT=$(echo "$CHAT_ID" | sed 's/^-100//')
-                LAST_MSG_LINK="https://t.me/c/${CLEAN_CHAT}/${MSG_ID}"
+                if [ -n "$TOPIC_ID" ]; then
+                  LAST_MSG_LINK="https://t.me/c/${CLEAN_CHAT}/${TOPIC_ID}/${MSG_ID}"
+                else
+                  LAST_MSG_LINK="https://t.me/c/${CLEAN_CHAT}/${MSG_ID}"
+                fi
               else
                 LAST_MSG_LINK="https://t.me/${CHAT_ID}/${MSG_ID}"
               fi

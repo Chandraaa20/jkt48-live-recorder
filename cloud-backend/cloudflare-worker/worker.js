@@ -442,12 +442,14 @@ export async function processLiveStreams(env) {
             `<i>Notifikasi otomatis dari Cloudflare Worker JKT48 Watcher.</i>`;
 
           const photoUrl = newLivePayload.thumbnail_url || member.avatar_url;
+          const threadId = env.TELEGRAM_NOTIF_THREAD_ID ? Number(env.TELEGRAM_NOTIF_THREAD_ID) : 2;
           if (photoUrl && photoUrl.startsWith('http')) {
             await fetch(`https://api.telegram.org/bot${env.TELEGRAM_BOT_TOKEN}/sendPhoto`, {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({
                 chat_id: env.TELEGRAM_CHAT_ID,
+                message_thread_id: threadId,
                 photo: photoUrl,
                 caption: msg,
                 parse_mode: 'HTML',
@@ -459,6 +461,7 @@ export async function processLiveStreams(env) {
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({
                 chat_id: env.TELEGRAM_CHAT_ID,
+                message_thread_id: threadId,
                 text: msg,
                 parse_mode: 'HTML',
               }),

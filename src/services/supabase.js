@@ -30,7 +30,7 @@ const DEFAULT_SUPABASE_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY || 'eyJhbGci
 const DEFAULT_WORKER_URL = import.meta.env.VITE_WORKER_URL || 'https://jkt48-live-watcher.chandra02new.workers.dev';
 const DEFAULT_GITHUB_TOKEN = import.meta.env.VITE_GITHUB_TOKEN || '';
 const DEFAULT_TELEGRAM_TOKEN = import.meta.env.VITE_TELEGRAM_BOT_TOKEN || '8984988206:AAFdz-53vl5FHckci1tmSoxMSSBVhRwhVrY';
-const DEFAULT_TELEGRAM_CHAT_ID = import.meta.env.VITE_TELEGRAM_CHAT_ID || '-1004418157265';
+const DEFAULT_TELEGRAM_CHAT_ID = import.meta.env.VITE_TELEGRAM_CHAT_ID || '-1004410575074';
 
 // A released APK must never retain an obsolete offline cache that overrides the
 // production roster.  This is deliberately run before configuration/client use.
@@ -394,6 +394,7 @@ export async function sendTelegramNotification({ token, chatId, text, photoUrl }
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           chat_id: targetChatId,
+          message_thread_id: 2,
           photo: photoUrl,
           caption: text,
           parse_mode: 'HTML',
@@ -416,6 +417,7 @@ export async function sendTelegramNotification({ token, chatId, text, photoUrl }
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         chat_id: targetChatId,
+        message_thread_id: 2,
         text,
         parse_mode: 'HTML',
         disable_web_page_preview: false,
