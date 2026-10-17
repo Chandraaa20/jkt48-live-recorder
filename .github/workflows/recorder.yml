@@ -85,6 +85,10 @@ jobs:
             echo "DURATION=${{ github.event.client_payload.duration || '0' }}" >> $GITHUB_ENV
           fi
 
+          START_TIME_WIB=$(TZ='Asia/Jakarta' date '+%d %b %Y, %H:%M WIB' | sed -e 's/Jan/Jan/' -e 's/Feb/Feb/' -e 's/Mar/Mar/' -e 's/Apr/Apr/' -e 's/May/Mei/' -e 's/Jun/Jun/' -e 's/Jul/Jul/' -e 's/Aug/Agt/' -e 's/Sep/Sep/' -e 's/Oct/Okt/' -e 's/Nov/Nov/' -e 's/Dec/Des/')
+          echo "START_TIME_WIB=$START_TIME_WIB" >> $GITHUB_ENV
+          echo "Recording start time: $START_TIME_WIB"
+
       - name: Notify Recording Started (Supabase)
         run: |
           SUPABASE_URL="${{ secrets.SUPABASE_URL }}"
@@ -221,7 +225,19 @@ jobs:
           FILE_MB=$(awk "BEGIN {printf \"%.2f\", $TOTAL_BYTES / 1048576}")
           echo "TOTAL_DURATION=$TOTAL_DURATION" >> $GITHUB_ENV
           echo "FILE_SIZE_MB=$FILE_MB" >> $GITHUB_ENV
-          echo "Consolidation complete: ${FILE_MB} MB total, ${TOTAL_DURATION}s duration."
+
+          # Human readable duration format (e.g. 1j 27m 41d or 27m 41d)
+          DUR_H=$((TOTAL_DURATION / 3600))
+          DUR_M=$(( (TOTAL_DURATION % 3600) / 60 ))
+          DUR_S=$((TOTAL_DURATION % 60))
+          if [ "$DUR_H" -gt 0 ]; then
+            HUMAN_DURATION="${DUR_H}j ${DUR_M}m ${DUR_S}d"
+          else
+            HUMAN_DURATION="${DUR_M}m ${DUR_S}d"
+          fi
+          echo "HUMAN_DURATION=$HUMAN_DURATION" >> $GITHUB_ENV
+
+          echo "Consolidation complete: ${FILE_MB} MB total, ${TOTAL_DURATION}s (${HUMAN_DURATION}) duration."
 
       - name: Upload Video to Telegram (Always Guaranteed Upload via Local Bot API 2GB)
         id: upload_telegram
@@ -274,17 +290,53 @@ jobs:
           for vid in "${VIDEO_FILES[@]}"; do
             VID_BYTES=$(stat -c%s "$vid")
             VID_MB=$(awk "BEGIN {printf \"%.2f\", $VID_BYTES / 1048576}")
+            
             PART_LABEL=""
-            if [ "$TOTAL_FILES" -gt 1 ]; then PART_LABEL="%0A📦 <b>Bagian ${CURR_NUM}/${TOTAL_FILES}</b>"; fi
-            CAPTION="🎬 <b>${MEMBER_NAME} — Rekaman Live</b>%0A📱 Platform: <b>${PLATFORM^^}</b>${PART_LABEL}%0A📦 Ukuran: <b>${VID_MB} MB</b>%0A⏱️ Durasi: <b>${TOTAL_DURATION} detik</b>%0A📅 $(TZ=Asia/Jakarta date '+%d %B %Y - %H:%M WIB')"
+            if [ "$TOTAL_FILES" -gt 1 ]; then
+              PART_LABEL=$(printf "\n📦 <b>Bagian %d/%d</b>" "$CURR_NUM" "$TOTAL_FILES")
+            fi
 
-            echo "Uploading $vid (${VID_MB} MB) to Telegram via Local Bot API 8081..."
+            # Real multiline caption without %0A
+            CAPTION=$(printf "🎬 <b>%s — Rekaman Live</b>\n📱 Platform: <b>%s</b>%s\n📦 Ukuran: <b>%s MB</b>\n⏱️ Durasi: <b>%s</b>\n📅 Mulai Rekam: <b>%s</b>" \
+              "$MEMBER_NAME" "${PLATFORM^^}" "$PART_LABEL" "$VID_MB" "$HUMAN_DURATION" "$START_TIME_WIB")
+
+            # 1. Probe video metadata (duration, width, height)
+            VID_WIDTH=$(ffprobe -v error -select_streams v:0 -show_entries stream=width -of default=noprint_wrappers=1:nokey=1 "$vid" 2>/dev/null | tr -dc '0-9')
+            VID_HEIGHT=$(ffprobe -v error -select_streams v:0 -show_entries stream=height -of default=noprint_wrappers=1:nokey=1 "$vid" 2>/dev/null | tr -dc '0-9')
+            VID_DUR=$(ffprobe -v error -show_entries format=duration -of default=noprint_wrappers=1:nokey=1 "$vid" 2>/dev/null | cut -d'.' -f1 | tr -dc '0-9')
+
+            if [ -z "$VID_DUR" ] || [ "$VID_DUR" -le 0 ] 2>/dev/null; then
+              VID_DUR="${TOTAL_DURATION:-60}"
+            fi
+
+            # 2. Extract 1 video thumbnail frame at 3s (or 1s fallback)
+            rm -f thumb.jpg
+            ffmpeg -hide_banner -loglevel error -y -ss 00:00:03 -i "$vid" -frames:v 1 -q:v 2 thumb.jpg || \
+            ffmpeg -hide_banner -loglevel error -y -ss 00:00:01 -i "$vid" -frames:v 1 -q:v 2 thumb.jpg || true
+
+            # 3. Assemble curl form parameters
+            EXTRA_ARGS=()
+            if [ -n "$VID_WIDTH" ] && [ "$VID_WIDTH" -gt 0 ] 2>/dev/null; then
+              EXTRA_ARGS+=(-F "width=${VID_WIDTH}")
+            fi
+            if [ -n "$VID_HEIGHT" ] && [ "$VID_HEIGHT" -gt 0 ] 2>/dev/null; then
+              EXTRA_ARGS+=(-F "height=${VID_HEIGHT}")
+            fi
+            if [ -n "$VID_DUR" ] && [ "$VID_DUR" -gt 0 ] 2>/dev/null; then
+              EXTRA_ARGS+=(-F "duration=${VID_DUR}")
+            fi
+            if [ -f "thumb.jpg" ] && [ -s "thumb.jpg" ]; then
+              EXTRA_ARGS+=(-F "thumbnail=@thumb.jpg")
+            fi
+
+            echo "Uploading $vid (${VID_MB} MB, ${VID_DUR}s, ${VID_WIDTH}x${VID_HEIGHT}) to Telegram via Local Bot API 8081..."
             RESPONSE=$(curl -s --max-time 1800 \
               -F "chat_id=${CHAT_ID}" \
               -F "video=@${vid}" \
               -F "caption=${CAPTION}" \
               -F "parse_mode=HTML" \
               -F "supports_streaming=true" \
+              "${EXTRA_ARGS[@]}" \
               "${TELEGRAM_API_URL}/sendVideo")
 
             IS_OK=$(echo "$RESPONSE" | jq -r '.ok')
@@ -301,6 +353,7 @@ jobs:
               echo "Telegram sendVideo error: $RESPONSE"
             fi
 
+            rm -f thumb.jpg
             CURR_NUM=$((CURR_NUM + 1))
             sleep 1
           done
