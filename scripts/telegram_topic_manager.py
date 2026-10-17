@@ -3,7 +3,7 @@ import json
 import os
 import sys
 
-BOT_TOKEN = os.environ.get("TELEGRAM_BOT_TOKEN", "8984988206:AAFdz-53vl5FHckci1tmSoxMSSBVhRwhVrY")
+BOT_TOKEN = os.environ.get("TELEGRAM_BOT_TOKEN", "")
 CHAT_ID = os.environ.get("TELEGRAM_CHAT_ID", "-1004410575074")
 
 CONFIG_PATH = os.path.join(os.path.dirname(os.path.dirname(__file__)), "config", "telegram_topics.json")

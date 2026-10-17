@@ -43,7 +43,7 @@ jobs:
           VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY || secrets.SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJ1Z2pxY3Z3bGZrb256aXlraXRhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTE5ODQyNzUsImV4cCI6MjEwNzU2MDI3NX0.g6RFp4Ykir52EvdCpbZfZfyeoKGb5ohwLTD2YjkYNE8' }}
           VITE_WORKER_URL: 'https://jkt48-live-watcher.chandra02new.workers.dev'
           VITE_GITHUB_REPO: 'Chandraaa20/jkt48-live-recorder'
-          VITE_TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN || '8984988206:AAFdz-53vl5FHckci1tmSoxMSSBVhRwhVrY' }}
+          VITE_TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           VITE_TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID || '-1004410575074' }}
         run: npm run build
 

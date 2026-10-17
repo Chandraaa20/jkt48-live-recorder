@@ -256,9 +256,6 @@ jobs:
           fi
 
           BOT_TOKEN="${{ secrets.TELEGRAM_BOT_TOKEN }}"
-          if [ -z "$BOT_TOKEN" ]; then
-            BOT_TOKEN="8984988206:AAFdz-53vl5FHckci1tmSoxMSSBVhRwhVrY"
-          fi
 
           CHAT_ID="${{ secrets.TELEGRAM_CHAT_ID }}"
           if [ -z "$CHAT_ID" ]; then
